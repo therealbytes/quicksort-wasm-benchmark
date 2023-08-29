@@ -7,19 +7,11 @@ contract QuickSort {
     uint256 public seed = 7;
 
     function random() internal returns (uint256) {
-        seed = (1103515245 * uint(seed) + 12345) % (2 ** 32);
+        seed = (1103515245 * uint(seed) + 12345) % (1 << 32);
         return seed;
     }
 
-    // function randomArray(uint256 size) public returns (uint256[] memory) {
-    //     uint256[] memory arr = new uint256[](size);
-    //     for (uint256 i = 0; i < size; i++) {
-    //         arr[i] = random();
-    //     }
-    //     return arr;
-    // }
-
-    function randomizeArray(uint256[] memory arr) public {
+    function randomizeArray(uint256[] memory arr) internal {
         for (uint256 i = 0; i < arr.length; i++) {
             arr[i] = random();
         }

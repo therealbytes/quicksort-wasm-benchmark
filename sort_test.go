@@ -6,12 +6,15 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/concrete/precompiles"
+	"github.com/ethereum/go-ethereum/concrete/wasm"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/therealbytes/concrete-sort/quicksort"
+	"github.com/wasmerio/wasmer-go/wasmer"
 )
 
 func validResult(checksum int64) bool {
@@ -21,7 +24,7 @@ func validResult(checksum int64) bool {
 func BenchmarkGo(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		qs := quicksort.NewQuicksortBenchmark(7)
+		qs := quicksort.NewQuicksortBenchmark()
 		checksum := int64(qs.Benchmark())
 		if !validResult(checksum) {
 			b.Fatal("invalid checksum:", checksum)
@@ -81,5 +84,33 @@ func BenchmarkEVM(b *testing.B) {
 		if !validResult(checksum) {
 			b.Fatal("invalid checksum:", checksum)
 		}
+	}
+}
+
+//go:embed testdata/tinygo.wasm
+var tinygoWasmBytecode []byte
+
+func BenchmarkTinygoSnailtracer(b *testing.B) {
+	runtimes := []struct {
+		name string
+		pc   precompiles.Precompile
+	}{
+		{"wazero", wasm.NewWazeroPrecompile(tinygoWasmBytecode)},
+		{"wasmer/singlepass", wasm.NewWasmerPrecompileWithConfig(tinygoWasmBytecode, wasmer.NewConfig().UseSinglepassCompiler())},
+		{"wasmer/cranelift", wasm.NewWasmerPrecompileWithConfig(tinygoWasmBytecode, wasmer.NewConfig().UseCraneliftCompiler())},
+	}
+	for _, runtime := range runtimes {
+		b.Run(runtime.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				ret, err := runtime.pc.Run(nil, nil)
+				if err != nil {
+					b.Fatal(err)
+				}
+				checksum := new(big.Int).SetBytes(ret).Int64()
+				if !validResult(checksum) {
+					b.Fatal("invalid checksum:", checksum)
+				}
+			}
+		})
 	}
 }

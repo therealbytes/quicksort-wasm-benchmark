@@ -4,8 +4,8 @@ type QuickSort struct {
 	seed uint64
 }
 
-func NewQuicksortBenchmark(seed uint64) *QuickSort {
-	return &QuickSort{seed: seed}
+func NewQuicksortBenchmark() *QuickSort {
+	return &QuickSort{seed: 7}
 }
 
 func (qs *QuickSort) random() uint {

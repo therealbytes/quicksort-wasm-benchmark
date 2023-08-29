@@ -4,10 +4,10 @@ pragma solidity ^0.8.13;
 import "forge-std/console2.sol";
 
 contract QuickSort {
-    uint256 public seed = 7;
+    uint256 public seed;
 
     function random() internal returns (uint256) {
-        seed = (1103515245 * uint(seed) + 12345) % (1 << 32);
+        seed = (1103515245 * uint(seed) + 12345) % (1 << 31);
         return seed;
     }
 
@@ -36,6 +36,7 @@ contract QuickSort {
     }
 
     function benchmark() public returns (uint256) {
+        seed = 7;
         uint256 checksum = 0;
         uint256[] memory arr = new uint256[](1000);
         for (uint256 i = 0; i < 100; i++) {

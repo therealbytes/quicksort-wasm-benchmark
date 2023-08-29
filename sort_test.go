@@ -15,13 +15,13 @@ import (
 )
 
 func validResult(checksum int64) bool {
-	return checksum == 43888725606
+	return checksum == 21880255009
 }
 
 func BenchmarkGo(b *testing.B) {
-	qs := quicksort.NewQuicksortBenchmark(7)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		qs := quicksort.NewQuicksortBenchmark(7)
 		checksum := int64(qs.Benchmark())
 		if !validResult(checksum) {
 			b.Fatal("invalid checksum:", checksum)

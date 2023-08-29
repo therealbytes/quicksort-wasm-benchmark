@@ -9,7 +9,7 @@ func NewQuicksortBenchmark(seed uint64) *QuickSort {
 }
 
 func (qs *QuickSort) random() uint {
-	qs.seed = (1103515245*qs.seed + 12345) % (1 << 32)
+	qs.seed = (1103515245*qs.seed + 12345) % (1 << 31)
 	return uint(qs.seed)
 }
 

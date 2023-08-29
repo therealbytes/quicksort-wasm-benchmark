@@ -11,10 +11,22 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/therealbytes/concrete-sort/quicksort"
 )
 
 func validResult(checksum int64) bool {
 	return checksum == 43888725606
+}
+
+func BenchmarkGo(b *testing.B) {
+	qs := quicksort.NewQuicksortBenchmark(7)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		checksum := int64(qs.Benchmark())
+		if !validResult(checksum) {
+			b.Fatal("invalid checksum:", checksum)
+		}
+	}
 }
 
 //go:embed testdata/quicksort.evm

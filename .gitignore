@@ -14,4 +14,8 @@ docs/
 .env
 
 # Bytecode
-testdata
+testdata/
+
+# Zig
+zig/zig-cache/
+zig/zig-out/

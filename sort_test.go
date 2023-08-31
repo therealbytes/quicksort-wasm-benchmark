@@ -114,3 +114,38 @@ func BenchmarkTinygoSnailtracer(b *testing.B) {
 		})
 	}
 }
+
+//go:embed testdata/rust-simple.wasm
+var rustWasmBytecode []byte
+
+func BenchmarkRustSnailtracer(b *testing.B) {
+	config := wasmer.NewConfig().UseCraneliftCompiler()
+	engine := wasmer.NewEngineWithConfig(config)
+	store := wasmer.NewStore(engine)
+	module, err := wasmer.NewModule(store, rustWasmBytecode)
+	if err != nil {
+		b.Fatal(err)
+	}
+	importObject := wasmer.NewImportObject()
+	instance, err := wasmer.NewInstance(module, importObject)
+	if err != nil {
+		b.Fatal(err)
+	}
+	run, err := instance.Exports.GetFunction("run")
+	if err != nil {
+		b.Fatal(err)
+	}
+	for i := 0; i < b.N; i++ {
+		ret, err := run(7)
+		if err != nil {
+			b.Fatal(err)
+		}
+		checksum, ok := ret.(int64)
+		if !ok {
+			b.Fatal("can not convert return value to int64:", ret)
+		}
+		if !validResult(checksum) {
+			b.Fatal("invalid checksum:", checksum)
+		}
+	}
+}

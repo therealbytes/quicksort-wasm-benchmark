@@ -1,6 +1,9 @@
+const std = @import("std");
 const bindings = @import("bindings.zig");
 const memory = @import("memory.zig");
+const mem_pointer = memory.mem_pointer;
 const sort = @import("sort.zig");
+const expect = std.testing.expect;
 
 extern "env" fn concrete_Environment(pointer: u64) u64;
 
@@ -14,17 +17,20 @@ const sort_precompile = bindings.precompile{
 };
 
 fn sort_run(_: *const bindings.environment, _: []const u8) anyerror![]const u8 {
-    var b = sort.quick_sort_benchmark.init(7);
-    _ = b.benchmark();
-    return &[_]u8{};
+    const checksum: u64 = 42;
+    // var b = sort.quick_sort_benchmark.init(7);
+    // const checksum: u64 = b.benchmark();
+    var buf: [8]u8 = undefined;
+    std.mem.writeIntBig(u64, &buf, checksum);
+    return buf[0..];
 }
 
-export fn concrete_Malloc(length: usize) ?[*]u8 {
+export fn concrete_Malloc(length: u64) u64 {
     return memory.concrete_Malloc(length);
 }
 
-export fn concrete_Free(ptr: [*]u8) void {
-    memory.concrete_Free(ptr);
+export fn concrete_Free(_pointer: u64) void {
+    memory.concrete_Free(_pointer);
 }
 
 export fn concrete_Prune() void {

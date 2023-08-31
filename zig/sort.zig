@@ -38,7 +38,7 @@ pub const quick_sort_benchmark = struct {
         var checksum: usize = 0;
         var arr: [1000]usize = undefined;
         var i: usize = 0;
-        while (i < 1) : (i += 1) {
+        while (i < 100) : (i += 1) {
             self.randomize_array(&arr);
             self.quick_sort(&arr, 0, arr.len - 1);
             checksum += arr[100];

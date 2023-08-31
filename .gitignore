@@ -19,3 +19,9 @@ testdata/
 # Zig
 zig/zig-cache/
 zig/zig-out/
+
+# Rust
+rust/sort/target/
+
+# WASM
+*.wasm

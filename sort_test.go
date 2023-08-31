@@ -124,8 +124,8 @@ func BenchmarkRustSnailtracer(b *testing.B) {
 	compiler := []struct {
 		name string
 	}{
-		{"singlepass"},
 		{"cranelift"},
+		{"singlepass"},
 	}
 	for _, compiler := range compiler {
 		b.Run(fmt.Sprintf("wasmer/%s", compiler.name), func(b *testing.B) {

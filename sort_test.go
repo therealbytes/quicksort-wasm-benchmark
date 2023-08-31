@@ -114,30 +114,3 @@ func BenchmarkTinygoSnailtracer(b *testing.B) {
 		})
 	}
 }
-
-//go:embed testdata/zig.wasm
-var zigWasmBytecode []byte
-
-func BenchmarkZigSnailtracer(b *testing.B) {
-	runtimes := []struct {
-		name string
-		pc   precompiles.Precompile
-	}{
-		{"wazero", wasm.NewWazeroPrecompile(zigWasmBytecode)},
-	}
-	for _, runtime := range runtimes {
-		b.Run(runtime.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				ret, err := runtime.pc.Run(nil, nil)
-				if err != nil {
-					b.Fatal(err)
-				}
-				b.Log(ret)
-				checksum := new(big.Int).SetBytes(ret).Int64()
-				if !validResult(checksum) {
-					b.Fatal("invalid checksum:", checksum)
-				}
-			}
-		})
-	}
-}

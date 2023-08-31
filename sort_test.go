@@ -19,7 +19,8 @@ import (
 )
 
 func validResult(checksum int64) bool {
-	return checksum == 21880255009
+	return checksum == 21880255009 // 100
+	// return checksum == 2167248742 // 10
 }
 
 func BenchmarkGo(b *testing.B) {

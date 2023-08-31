@@ -1,6 +1,6 @@
 .PHONY: evm solidity wasm tinygo rust
 
-all: evm wasm
+all: evm wasm benchmark
 
 evm: solidity
 

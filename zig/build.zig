@@ -6,8 +6,8 @@ pub fn build(b: *std.build.Builder) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const lib = b.addSharedLibrary(.{
-        .name = "zig",
-        .root_source_file = .{ .path = "main.zig" },
+        .name = "zig-simple",
+        .root_source_file = .{ .path = "./simple.zig" },
         .target = target,
         .optimize = optimize,
     });

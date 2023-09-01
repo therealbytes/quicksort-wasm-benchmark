@@ -4,10 +4,10 @@ pkg: github.com/therealbytes/concrete-sort
 cpu: Intel(R) Core(TM) i5-8257U CPU @ 1.40GHz
 BenchmarkGo-8                  	                             228	   5168630 ns/op
 BenchmarkEVM-8                 	                               1	1825963651 ns/op	 402376297 gas
-BenchmarkTinygoSnailtracer/wazero-8         	              98	  11498635 ns/op
-BenchmarkTinygoSnailtracer/wasmer/singlepass-8         	     100	  12463634 ns/op
-BenchmarkTinygoSnailtracer/wasmer/cranelift-8          	     202	   5998899 ns/op
-BenchmarkRustSnailtracer/wasmer/singlepass-8           	     100	  12261077 ns/op
-BenchmarkRustSnailtracer/wasmer/cranelift-8            	     205	   5781802 ns/op
+BenchmarkTinygoQuicksort/wazero-8         	              98	  11498635 ns/op
+BenchmarkTinygoQuicksort/wasmer/singlepass-8         	     100	  12463634 ns/op
+BenchmarkTinygoQuicksort/wasmer/cranelift-8          	     202	   5998899 ns/op
+BenchmarkRustQuicksort/wasmer/singlepass-8           	     100	  12261077 ns/op
+BenchmarkRustQuicksort/wasmer/cranelift-8            	     205	   5781802 ns/op
 PASS
 ok  	github.com/therealbytes/concrete-sort	14.316s

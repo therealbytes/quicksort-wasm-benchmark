@@ -1,10 +1,10 @@
-pub struct QuickSort {
+pub struct Quicksort {
     seed: u64,
 }
 
-impl QuickSort {
-    pub fn new(seed: u64) -> QuickSort {
-        QuickSort { seed: seed }
+impl Quicksort {
+    pub fn new(seed: u64) -> Quicksort {
+        Quicksort { seed: seed }
     }
 
     fn random(&mut self) -> u64 {
@@ -67,7 +67,7 @@ mod tests {
 
     #[test]
     fn check_checksum() {
-        let mut qs = QuickSort::new(7);
+        let mut qs = Quicksort::new(7);
         let checksum = qs.benchmark();
         assert_eq!(checksum, 21880255009);
     }

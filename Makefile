@@ -6,7 +6,7 @@ evm: solidity
 
 solidity:
 	forge build --optimizer-runs 1000
-	jq -r '.deployedBytecode.object' out/QuickSort.sol/QuickSort.json > testdata/quicksort.evm
+	jq -r '.deployedBytecode.object' out/Quicksort.sol/Quicksort.json > testdata/quicksort.evm
 
 wasm: tinygo rust
 

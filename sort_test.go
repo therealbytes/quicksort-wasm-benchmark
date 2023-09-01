@@ -92,7 +92,7 @@ func BenchmarkEVM(b *testing.B) {
 //go:embed testdata/tinygo.wasm
 var tinygoWasmBytecode []byte
 
-func BenchmarkTinygoSnailtracer(b *testing.B) {
+func BenchmarkTinygoQuicksort(b *testing.B) {
 	runtimes := []struct {
 		name string
 		pc   precompiles.Precompile
@@ -121,7 +121,7 @@ func BenchmarkTinygoSnailtracer(b *testing.B) {
 //go:embed testdata/rust-simple.wasm
 var rustWasmBytecode []byte
 
-func BenchmarkRustSnailtracer(b *testing.B) {
+func BenchmarkRustQuicksort(b *testing.B) {
 	compiler := []struct {
 		name string
 	}{

@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import "forge-std/console2.sol";
 
-contract QuickSort {
+contract Quicksort {
     uint256 public seed;
 
     function random() internal returns (uint256) {
@@ -17,7 +17,7 @@ contract QuickSort {
         }
     }
 
-    function quickSort(uint[] memory arr, int left, int right) internal {
+    function quicksort(uint[] memory arr, int left, int right) internal {
         int i = left;
         int j = right;
         if (i == j) return;
@@ -31,8 +31,8 @@ contract QuickSort {
                 j--;
             }
         }
-        if (left < j) quickSort(arr, left, j);
-        if (i < right) quickSort(arr, i, right);
+        if (left < j) quicksort(arr, left, j);
+        if (i < right) quicksort(arr, i, right);
     }
 
     function benchmark() public returns (uint256) {
@@ -41,7 +41,7 @@ contract QuickSort {
         uint256[] memory arr = new uint256[](1000);
         for (uint256 i = 0; i < 100; i++) {
             randomizeArray(arr);
-            quickSort(arr, 0, 999);
+            quicksort(arr, 0, 999);
             checksum += arr[100];
         }
         return checksum;

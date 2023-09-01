@@ -1,25 +1,25 @@
 package quicksort
 
-type QuickSort struct {
+type Quicksort struct {
 	seed uint64
 }
 
-func NewQuicksortBenchmark() *QuickSort {
-	return &QuickSort{seed: 7}
+func NewQuicksortBenchmark() *Quicksort {
+	return &Quicksort{seed: 7}
 }
 
-func (qs *QuickSort) random() uint {
+func (qs *Quicksort) random() uint {
 	qs.seed = (1103515245*qs.seed + 12345) % (1 << 31)
 	return uint(qs.seed)
 }
 
-func (qs *QuickSort) randomizeArray(arr []uint) {
+func (qs *Quicksort) randomizeArray(arr []uint) {
 	for i := range arr {
 		arr[i] = qs.random()
 	}
 }
 
-func (qs *QuickSort) quickSort(arr []uint, left, right int) {
+func (qs *Quicksort) quicksort(arr []uint, left, right int) {
 	i, j := left, right
 	if i == j {
 		return
@@ -40,19 +40,19 @@ func (qs *QuickSort) quickSort(arr []uint, left, right int) {
 		}
 	}
 	if left < j {
-		qs.quickSort(arr, left, j)
+		qs.quicksort(arr, left, j)
 	}
 	if i < right {
-		qs.quickSort(arr, i, right)
+		qs.quicksort(arr, i, right)
 	}
 }
 
-func (qs *QuickSort) Benchmark() uint64 {
+func (qs *Quicksort) Benchmark() uint64 {
 	var checksum uint64 = 0
 	arr := make([]uint, 1000)
 	for i := 0; i < 100; i++ {
 		qs.randomizeArray(arr)
-		qs.quickSort(arr, 0, 999)
+		qs.quicksort(arr, 0, 999)
 		checksum += uint64(arr[100])
 	}
 	return checksum

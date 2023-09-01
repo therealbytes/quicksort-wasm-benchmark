@@ -10,11 +10,11 @@ import (
 	"github.com/therealbytes/concrete-sort/quicksort"
 )
 
-type snailtracerPrecompile struct {
+type quicksortPrecompile struct {
 	lib.BlankPrecompile
 }
 
-func (t *snailtracerPrecompile) Run(env api.Environment, input []byte) ([]byte, error) {
+func (t *quicksortPrecompile) Run(env api.Environment, input []byte) ([]byte, error) {
 	b := quicksort.NewQuicksortBenchmark()
 	checksum := b.Benchmark()
 	checksumBN := big.NewInt(int64(checksum))
@@ -22,7 +22,7 @@ func (t *snailtracerPrecompile) Run(env api.Environment, input []byte) ([]byte, 
 }
 
 func init() {
-	tinygo.WasmWrap(&snailtracerPrecompile{})
+	tinygo.WasmWrap(&quicksortPrecompile{})
 }
 
 // main is REQUIRED for TinyGo to compile to WASM

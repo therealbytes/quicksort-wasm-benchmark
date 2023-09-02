@@ -19,8 +19,7 @@ import (
 )
 
 func validResult(checksum int64) bool {
-	return checksum == 21880255009 // 100
-	// return checksum == 2167248742 // 10
+	return checksum == quicksort.CHECKSUM
 }
 
 func BenchmarkGo(b *testing.B) {
@@ -157,7 +156,7 @@ func BenchmarkRustQuicksort(b *testing.B) {
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				ret, err := run(7)
+				ret, err := run()
 				if err != nil {
 					b.Fatal(err)
 				}

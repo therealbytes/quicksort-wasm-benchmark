@@ -1,11 +1,18 @@
 package quicksort
 
+const (
+	SEED     = 7
+	L        = 1000
+	N        = 100
+	CHECKSUM = 107829970005
+)
+
 type Quicksort struct {
 	seed uint64
 }
 
 func NewQuicksortBenchmark() *Quicksort {
-	return &Quicksort{seed: 7}
+	return &Quicksort{seed: SEED}
 }
 
 func (qs *Quicksort) random() uint {
@@ -49,11 +56,11 @@ func (qs *Quicksort) quicksort(arr []uint, left, right int) {
 
 func (qs *Quicksort) Benchmark() uint64 {
 	var checksum uint64 = 0
-	arr := make([]uint, 1000)
-	for i := 0; i < 100; i++ {
+	arr := make([]uint, L)
+	for i := 0; i < N; i++ {
 		qs.randomizeArray(arr)
-		qs.quicksort(arr, 0, 999)
-		checksum += uint64(arr[100])
+		qs.quicksort(arr, 0, len(arr)-1)
+		checksum += uint64(arr[L/2])
 	}
 	return checksum
 }

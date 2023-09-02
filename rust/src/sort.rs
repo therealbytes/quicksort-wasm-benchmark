@@ -1,3 +1,8 @@
+pub const SEED: u64 = 7;
+pub const L: usize = 1000;
+pub const N: usize = 100;
+pub const CHECKSUM: u64 = 107829970005;
+
 pub struct Quicksort {
     seed: u64,
 }
@@ -51,11 +56,11 @@ impl Quicksort {
 
     pub fn benchmark(&mut self) -> u64 {
         let mut checksum: u64 = 0;
-        let mut arr = vec![0; 1000];
-        for _ in 0..100 {
+        let mut arr = vec![0; L];
+        for _ in 0..N {
             self.randomize_array(&mut arr);
-            self.quick_sort(&mut arr, 0, 999);
-            checksum += arr[100] as u64;
+            self.quick_sort(&mut arr, 0, L - 1);
+            checksum += arr[L / 2] as u64;
         }
         checksum
     }
@@ -70,9 +75,9 @@ mod tests {
     #[bench]
     fn benchmark_check_checksum(b: &mut Bencher) {
         b.iter(|| {
-            let mut qs = Quicksort::new(7);
+            let mut qs = Quicksort::new(SEED);
             let checksum = qs.benchmark();
-            assert_eq!(checksum, 21880255009);
+            assert_eq!(checksum, CHECKSUM);
         });
     }
 }

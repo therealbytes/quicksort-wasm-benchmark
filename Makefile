@@ -18,3 +18,5 @@ rust:
 
 benchmark:
 	go test -bench . > benchmark.txt
+	echo "\nNative Rust" >> benchmark.txt
+	cd rust && cargo +nightly bench >> ../benchmark.txt

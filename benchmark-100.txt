@@ -2,12 +2,13 @@ goos: darwin
 goarch: amd64
 pkg: github.com/therealbytes/concrete-sort
 cpu: Intel(R) Core(TM) i5-8257U CPU @ 1.40GHz
-BenchmarkGo-8                  	                             228	   5168630 ns/op
-BenchmarkEVM-8                 	                               1	1825963651 ns/op	 402376297 gas
-BenchmarkTinygoQuicksort/wazero-8         	              98	  11498635 ns/op
-BenchmarkTinygoQuicksort/wasmer/singlepass-8         	     100	  12463634 ns/op
-BenchmarkTinygoQuicksort/wasmer/cranelift-8          	     202	   5998899 ns/op
-BenchmarkRustQuicksort/wasmer/singlepass-8           	     100	  12261077 ns/op
-BenchmarkRustQuicksort/wasmer/cranelift-8            	     205	   5781802 ns/op
+Go-8                	                             237	   5012137 ns/op
+Rust-8               	                               1	   5235500 ns/op
+TinygoQuicksort/wasmer/cranelift-8          	     210	   5706034 ns/op
+RustQuicksort/wasmer/cranelift-8            	     208	   5711718 ns/op
+TinygoQuicksort/wazero-8         	                  99	  12183878 ns/op
+TinygoQuicksort/wasmer/singlepass-8         	      81	  12725835 ns/op
+RustQuicksort/wasmer/singlepass-8           	     100	  11274474 ns/op
+EVM-8               	                               1	1761466683 ns/op	 402376297 gas
 PASS
-ok  	github.com/therealbytes/concrete-sort	14.316s
+ok  	github.com/therealbytes/concrete-sort	11.809s

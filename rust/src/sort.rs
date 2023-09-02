@@ -7,18 +7,18 @@ impl Quicksort {
         Quicksort { seed: seed }
     }
 
-    fn random(&mut self) -> u64 {
+    fn random(&mut self) -> usize {
         self.seed = (1103515245 * self.seed + 12345) % (1 << 31);
-        self.seed
+        (self.seed % (std::u32::MAX as u64 + 1)) as usize
     }
 
-    fn randomize_array(&mut self, arr: &mut Vec<u64>) {
+    fn randomize_array(&mut self, arr: &mut Vec<usize>) {
         for x in arr.iter_mut() {
             *x = self.random();
         }
     }
 
-    fn quick_sort(&mut self, arr: &mut Vec<u64>, left: usize, right: usize) {
+    fn quick_sort(&mut self, arr: &mut Vec<usize>, left: usize, right: usize) {
         if left >= right {
             return;
         }
@@ -55,20 +55,24 @@ impl Quicksort {
         for _ in 0..100 {
             self.randomize_array(&mut arr);
             self.quick_sort(&mut arr, 0, 999);
-            checksum += arr[100];
+            checksum += arr[100] as u64;
         }
         checksum
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
+    extern crate test;
+    use test::Bencher;
 
-    #[test]
-    fn check_checksum() {
-        let mut qs = Quicksort::new(7);
-        let checksum = qs.benchmark();
-        assert_eq!(checksum, 21880255009);
+    #[bench]
+    fn benchmark_check_checksum(b: &mut Bencher) {
+        b.iter(|| {
+            let mut qs = Quicksort::new(7);
+            let checksum = qs.benchmark();
+            assert_eq!(checksum, 21880255009);
+        });
     }
 }

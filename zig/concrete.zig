@@ -17,9 +17,8 @@ const sort_precompile = bindings.precompile{
 };
 
 fn sort_run(_: *const bindings.environment, _: []const u8) anyerror![]const u8 {
-    const checksum: u64 = 42;
-    // var b = sort.quick_sort_benchmark.init(7);
-    // const checksum: u64 = b.benchmark();
+    var b = sort.quick_sort_benchmark.init();
+    const checksum: u64 = b.benchmark();
     var buf: [8]u8 = undefined;
     std.mem.writeIntBig(u64, &buf, checksum);
     return buf[0..];

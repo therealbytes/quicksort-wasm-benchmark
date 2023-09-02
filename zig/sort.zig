@@ -2,6 +2,11 @@ const std = @import("std");
 const allocator = std.heap.page_allocator;
 const expect = std.testing.expect;
 
+const SEED = 7;
+const L = 1000;
+const N = 100;
+const CHECKSUM = 107829970005;
+
 pub const quick_sort_benchmark = struct {
     seed: u64,
 
@@ -36,23 +41,23 @@ pub const quick_sort_benchmark = struct {
 
     pub fn benchmark(self: *quick_sort_benchmark) u64 {
         var checksum: usize = 0;
-        var arr: [1000]usize = undefined;
+        var arr: [L]usize = undefined;
         var i: usize = 0;
-        while (i < 100) : (i += 1) {
+        while (i < N) : (i += 1) {
             self.randomize_array(&arr);
             self.quick_sort(&arr, 0, arr.len - 1);
-            checksum += arr[100];
+            checksum += arr[L / 2];
         }
         return checksum;
     }
 
-    pub fn init(seed: u64) quick_sort_benchmark {
-        return quick_sort_benchmark{ .seed = seed };
+    pub fn init() quick_sort_benchmark {
+        return quick_sort_benchmark{ .seed = SEED };
     }
 };
 
 test "check checksum" {
-    var qs = quick_sort_benchmark.init(7);
+    var qs = quick_sort_benchmark.init();
     const result = qs.benchmark();
-    try expect(result == 21880255009);
+    try expect(result == CHECKSUM);
 }

@@ -1,4 +1,4 @@
-.PHONY: all evm solidity wasm tinygo rust assemblyscript benchmark
+.PHONY: all evm solidity wasm tinygo rust assemblyscript benchmark benchmark-native-rust
 
 all: evm wasm benchmark
 
@@ -22,6 +22,11 @@ assemblyscript:
 	cp assemblyscript/build/release.wasm testdata/assemblyscript.wasm
 
 benchmark:
-	go test -bench . > benchmark.txt
-	echo "\nNative Rust" >> benchmark.txt
-	cd rust && cargo +nightly bench >> ../benchmark.txt
+	go test -bench . -benchmem | tee benchmark_output.txt
+	echo "Benchmark,Size,Iterations,ns/op,Bytes/op,Allocs/op" > benchmark_results.csv
+	awk '/Benchmark/ { print $$1 "," $$5 "," $$2 "," $$3 "," $$7 "," $$9 }' benchmark_output.txt >> benchmark_results.csv
+	rm benchmark_output.txt
+
+benchmark-native-rust:
+	cd rust && cargo +nightly bench
+

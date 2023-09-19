@@ -23,12 +23,11 @@ func validResult(checksum int64) bool {
 	return checksum == quicksort.CHECKSUM
 }
 
-func addCodeMetadata(b *testing.B, code []byte) {
-	b.ReportMetric(float64(len(code)), "code_size")
+func reportCodeMetadata(b *testing.B, code []byte) {
+	b.ReportMetric(float64(len(code)), "bytes")
 }
 
 func BenchmarkGo(b *testing.B) {
-	addCodeMetadata(b, []byte{})
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		qs := quicksort.NewQuicksortBenchmark()
@@ -36,6 +35,7 @@ func BenchmarkGo(b *testing.B) {
 		if !validResult(checksum) {
 			b.Fatal("invalid checksum:", checksum)
 		}
+		reportCodeMetadata(b, []byte{})
 	}
 }
 
@@ -43,8 +43,6 @@ func BenchmarkGo(b *testing.B) {
 var evmBytecodeHex []byte
 
 func BenchmarkEVM(b *testing.B) {
-	addCodeMetadata(b, evmBytecodeHex)
-
 	var (
 		address        = common.HexToAddress("0xc0ffee")
 		origin         = common.HexToAddress("0xc0ffee0001")
@@ -88,11 +86,13 @@ func BenchmarkEVM(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
-		b.ReportMetric(float64(gasLimit-gasLeft), "gas")
 		checksum := new(big.Int).SetBytes(ret).Int64()
 		if !validResult(checksum) {
 			b.Fatal("invalid checksum:", checksum)
 		}
+		// b.ReportMetric(float64(gasLimit-gasLeft), "gas")
+		_ = gasLeft
+		reportCodeMetadata(b, evmBytecodeHex)
 	}
 }
 
@@ -120,7 +120,6 @@ func BenchmarkTinygoQuicksort(b *testing.B) {
 
 	for _, runtime := range runtimes {
 		b.Run(runtime.name, func(b *testing.B) {
-			addCodeMetadata(b, runtime.code)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				ret, err := runtime.pc.Run(nil, nil)
@@ -131,6 +130,7 @@ func BenchmarkTinygoQuicksort(b *testing.B) {
 				if !validResult(checksum) {
 					b.Fatal("invalid checksum:", checksum)
 				}
+				reportCodeMetadata(b, runtime.code)
 			}
 		})
 	}
@@ -175,7 +175,7 @@ func newBenchWasmerInstance(b *testing.B, code []byte, config *wasmer.Config) *w
 	return instance
 }
 
-func benchWasmerInstance(b *testing.B, instance *wasmer.Instance) {
+func benchWasmerInstance(b *testing.B, instance *wasmer.Instance, code []byte) {
 	for i := 0; i < b.N; i++ {
 		run, err := instance.Exports.GetFunction("run")
 		if err != nil {
@@ -192,6 +192,7 @@ func benchWasmerInstance(b *testing.B, instance *wasmer.Instance) {
 		if !validResult(checksum) {
 			b.Fatal("invalid checksum:", checksum)
 		}
+		reportCodeMetadata(b, code)
 	}
 }
 
@@ -211,9 +212,8 @@ func BenchmarkWasmRustQuicksort(b *testing.B) {
 	}
 	for _, bc := range benchCases {
 		b.Run(bc.name, func(b *testing.B) {
-			addCodeMetadata(b, rustWasmBytecode)
 			b.ResetTimer()
-			benchWasmerInstance(b, bc.instance)
+			benchWasmerInstance(b, bc.instance, rustWasmBytecode)
 		})
 	}
 }
@@ -228,9 +228,8 @@ func BenchmarkWasmAssemblyScriptQuicksort(b *testing.B) {
 	}
 	for _, bc := range benchCases {
 		b.Run(bc.name, func(b *testing.B) {
-			addCodeMetadata(b, assemblyScriptBytecode)
 			b.ResetTimer()
-			benchWasmerInstance(b, bc.instance)
+			benchWasmerInstance(b, bc.instance, assemblyScriptBytecode)
 		})
 	}
 }

@@ -11,7 +11,8 @@ solidity:
 wasm: tinygo rust
 
 tinygo:
-	tinygo build -opt=2 -o testdata/tinygo.wasm -target=wasi ./tinygo/main.go
+	tinygo build -opt=2 -no-debug -o testdata/tinygo_o2.wasm -target=wasi ./tinygo/main.go
+	tinygo build -opt=z -no-debug -o testdata/tinygo_oz.wasm -target=wasi ./tinygo/main.go
 
 rust:
 	rustc -O -o testdata/rust-simple.wasm --target wasm32-unknown-unknown --crate-type cdylib rust/src/main.rs

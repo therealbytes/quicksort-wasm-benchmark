@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/tetratelabs/wazero"
 	"github.com/therealbytes/concrete-sort/quicksort"
 	"github.com/wasmerio/wasmer-go/wasmer"
 )
@@ -88,18 +89,49 @@ func BenchmarkEVM(b *testing.B) {
 	}
 }
 
-//go:embed testdata/tinygo.wasm
-var tinygoWasmBytecode []byte
+//go:embed testdata/tinygo_o2.wasm
+var tinygoWasmBytecode_o2 []byte
+
+//go:embed testdata/tinygo_oz.wasm
+var tinygoWasmBytecode_oz []byte
 
 func BenchmarkTinygoQuicksort(b *testing.B) {
-	runtimes := []struct {
-		name string
-		pc   precompiles.Precompile
-	}{
-		{"wazero", wasm.NewWazeroPrecompile(tinygoWasmBytecode)},
-		{"wasmer/singlepass", wasm.NewWasmerPrecompileWithConfig(tinygoWasmBytecode, wasmer.NewConfig().UseSinglepassCompiler())},
-		{"wasmer/cranelift", wasm.NewWasmerPrecompileWithConfig(tinygoWasmBytecode, wasmer.NewConfig().UseCraneliftCompiler())},
+	newWazeroInterpretedPC := func(bytecode []byte) precompiles.Precompile {
+		config := wazero.NewRuntimeConfigInterpreter()
+		return wasm.NewWazeroPrecompileWithConfig(bytecode, config)
 	}
+
+	newWazeroCompiledPC := func(bytecode []byte) precompiles.Precompile {
+		config := wazero.NewRuntimeConfigCompiler()
+		return wasm.NewWazeroPrecompileWithConfig(bytecode, config)
+	}
+
+	newWasmerSinglepassPC := func(bytecode []byte) precompiles.Precompile {
+		config := wasmer.NewConfig().UseSinglepassCompiler()
+		return wasm.NewWasmerPrecompileWithConfig(bytecode, config)
+	}
+
+	newWasmerCraneliftPC := func(bytecode []byte) precompiles.Precompile {
+		config := wasmer.NewConfig().UseCraneliftCompiler()
+		return wasm.NewWasmerPrecompileWithConfig(bytecode, config)
+	}
+
+	type runtimeConfig struct {
+		name string
+		pc   func(bytecode []byte) precompiles.Precompile
+	}
+
+	runtimes := []runtimeConfig{
+		{"wazero/interpreted/o2", newWazeroInterpretedPC(tinygoWasmBytecode_o2)},
+		{"wazero/interpreted/oz", newWazeroInterpretedPC(tinygoWasmBytecode_oz)},
+		{"wazero/compiled/o2", newWazeroCompiledPC(tinygoWasmBytecode_o2)},
+		{"wazero/compiled/oz", newWazeroCompiledPC(tinygoWasmBytecode_oz)},
+		{"wasmer/singlepass/o2", newWasmerSinglepassPC(tinygoWasmBytecode_o2)},
+		{"wasmer/singlepass/oz", newWasmerSinglepassPC(tinygoWasmBytecode_oz)},
+		{"wasmer/cranelift/o2", newWasmerCraneliftPC(tinygoWasmBytecode_o2)},
+		{"wasmer/cranelift/oz", newWasmerCraneliftPC(tinygoWasmBytecode_oz)},
+	}
+
 	for _, runtime := range runtimes {
 		b.Run(runtime.name, func(b *testing.B) {
 			b.ResetTimer()

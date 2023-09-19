@@ -4,7 +4,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/concrete/api"
+	"github.com/ethereum/go-ethereum/concrete"
 	"github.com/ethereum/go-ethereum/concrete/lib"
 	"github.com/ethereum/go-ethereum/tinygo"
 	"github.com/therealbytes/concrete-sort/quicksort"
@@ -14,7 +14,7 @@ type quicksortPrecompile struct {
 	lib.BlankPrecompile
 }
 
-func (t *quicksortPrecompile) Run(env api.Environment, input []byte) ([]byte, error) {
+func (t *quicksortPrecompile) Run(env concrete.Environment, input []byte) ([]byte, error) {
 	b := quicksort.NewQuicksortBenchmark()
 	checksum := b.Benchmark()
 	checksumBN := big.NewInt(int64(checksum))

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/concrete/precompiles"
+	"github.com/ethereum/go-ethereum/concrete"
 	"github.com/ethereum/go-ethereum/concrete/wasm"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -96,29 +96,29 @@ var tinygoWasmBytecode_o2 []byte
 var tinygoWasmBytecode_oz []byte
 
 func BenchmarkTinygoQuicksort(b *testing.B) {
-	newWazeroInterpretedPC := func(bytecode []byte) precompiles.Precompile {
+	newWazeroInterpretedPC := func(bytecode []byte) concrete.Precompile {
 		config := wazero.NewRuntimeConfigInterpreter()
 		return wasm.NewWazeroPrecompileWithConfig(bytecode, config)
 	}
 
-	newWazeroCompiledPC := func(bytecode []byte) precompiles.Precompile {
+	newWazeroCompiledPC := func(bytecode []byte) concrete.Precompile {
 		config := wazero.NewRuntimeConfigCompiler()
 		return wasm.NewWazeroPrecompileWithConfig(bytecode, config)
 	}
 
-	newWasmerSinglepassPC := func(bytecode []byte) precompiles.Precompile {
+	newWasmerSinglepassPC := func(bytecode []byte) concrete.Precompile {
 		config := wasmer.NewConfig().UseSinglepassCompiler()
 		return wasm.NewWasmerPrecompileWithConfig(bytecode, config)
 	}
 
-	newWasmerCraneliftPC := func(bytecode []byte) precompiles.Precompile {
+	newWasmerCraneliftPC := func(bytecode []byte) concrete.Precompile {
 		config := wasmer.NewConfig().UseCraneliftCompiler()
 		return wasm.NewWasmerPrecompileWithConfig(bytecode, config)
 	}
 
 	type runtimeConfig struct {
 		name string
-		pc   func(bytecode []byte) precompiles.Precompile
+		pc   concrete.Precompile
 	}
 
 	runtimes := []runtimeConfig{

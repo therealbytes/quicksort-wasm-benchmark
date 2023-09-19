@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/ethereum/go-ethereum v1.12.2
+	github.com/tetratelabs/wazero v1.1.0
 	github.com/wasmerio/wasmer-go v1.0.4
 )
 
@@ -20,6 +21,7 @@ require (
 	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/deckarep/golang-set/v2 v2.1.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
+	github.com/ethereum-optimism/superchain-registry/superchain v0.0.0-20230817174831-5d3ca1966435 // indirect
 	github.com/getsentry/sentry-go v0.18.0 // indirect
 	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
@@ -44,7 +46,6 @@ require (
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 // indirect
-	github.com/tetratelabs/wazero v1.1.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
 	golang.org/x/crypto v0.9.0 // indirect
@@ -54,6 +55,7 @@ require (
 	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/therealbytes/concrete-geth-private v0.0.0-20230919082922-9ec06660bec3
+replace github.com/ethereum/go-ethereum => github.com/concrete-eth/concrete-geth v0.0.0-20230919082922-9ec06660bec3

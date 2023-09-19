@@ -102,7 +102,7 @@ var tinygoWasmBytecode_o2 []byte
 //go:embed testdata/tinygo_oz.wasm
 var tinygoWasmBytecode_oz []byte
 
-func BenchmarkTinygoQuicksort(b *testing.B) {
+func BenchmarkWasmTinygo(b *testing.B) {
 	runtimes := []struct {
 		name string
 		pc   concrete.Precompile
@@ -202,7 +202,7 @@ var rustWasmBytecode []byte
 //go:embed testdata/assemblyscript.wasm
 var assemblyScriptBytecode []byte
 
-func BenchmarkWasmRustQuicksort(b *testing.B) {
+func BenchmarkWasmRust(b *testing.B) {
 	benchCases := []struct {
 		name     string
 		instance *wasmer.Instance
@@ -218,7 +218,7 @@ func BenchmarkWasmRustQuicksort(b *testing.B) {
 	}
 }
 
-func BenchmarkWasmAssemblyScriptQuicksort(b *testing.B) {
+func BenchmarkWasmAssemblyScript(b *testing.B) {
 	benchCases := []struct {
 		name     string
 		instance *wasmer.Instance

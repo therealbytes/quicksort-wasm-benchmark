@@ -8,7 +8,7 @@ solidity:
 	forge build --optimizer-runs 1000 --sizes
 	jq -r '.deployedBytecode.object' out/Quicksort.sol/Quicksort.json > testdata/quicksort.evm
 
-wasm: tinygo rust
+wasm: tinygo rust assemblyscript
 
 tinygo:
 	tinygo build -opt=2 -no-debug -o testdata/tinygo_o2.wasm -target=wasi ./tinygo/main.go

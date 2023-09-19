@@ -23,7 +23,12 @@ func validResult(checksum int64) bool {
 	return checksum == quicksort.CHECKSUM
 }
 
+func addCodeMetadata(b *testing.B, code []byte) {
+	b.ReportMetric(float64(len(code)), "code_size")
+}
+
 func BenchmarkGo(b *testing.B) {
+	addCodeMetadata(b, []byte{})
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		qs := quicksort.NewQuicksortBenchmark()
@@ -38,6 +43,8 @@ func BenchmarkGo(b *testing.B) {
 var evmBytecodeHex []byte
 
 func BenchmarkEVM(b *testing.B) {
+	addCodeMetadata(b, evmBytecodeHex)
+
 	var (
 		address        = common.HexToAddress("0xc0ffee")
 		origin         = common.HexToAddress("0xc0ffee0001")
@@ -96,44 +103,24 @@ var tinygoWasmBytecode_o2 []byte
 var tinygoWasmBytecode_oz []byte
 
 func BenchmarkTinygoQuicksort(b *testing.B) {
-	newWazeroInterpretedPC := func(bytecode []byte) concrete.Precompile {
-		config := wazero.NewRuntimeConfigInterpreter()
-		return wasm.NewWazeroPrecompileWithConfig(bytecode, config)
-	}
-
-	newWazeroCompiledPC := func(bytecode []byte) concrete.Precompile {
-		config := wazero.NewRuntimeConfigCompiler()
-		return wasm.NewWazeroPrecompileWithConfig(bytecode, config)
-	}
-
-	newWasmerSinglepassPC := func(bytecode []byte) concrete.Precompile {
-		config := wasmer.NewConfig().UseSinglepassCompiler()
-		return wasm.NewWasmerPrecompileWithConfig(bytecode, config)
-	}
-
-	newWasmerCraneliftPC := func(bytecode []byte) concrete.Precompile {
-		config := wasmer.NewConfig().UseCraneliftCompiler()
-		return wasm.NewWasmerPrecompileWithConfig(bytecode, config)
-	}
-
-	type runtimeConfig struct {
+	runtimes := []struct {
 		name string
 		pc   concrete.Precompile
-	}
-
-	runtimes := []runtimeConfig{
-		{"wazero/interpreted/o2", newWazeroInterpretedPC(tinygoWasmBytecode_o2)},
-		{"wazero/interpreted/oz", newWazeroInterpretedPC(tinygoWasmBytecode_oz)},
-		{"wazero/compiled/o2", newWazeroCompiledPC(tinygoWasmBytecode_o2)},
-		{"wazero/compiled/oz", newWazeroCompiledPC(tinygoWasmBytecode_oz)},
-		{"wasmer/singlepass/o2", newWasmerSinglepassPC(tinygoWasmBytecode_o2)},
-		{"wasmer/singlepass/oz", newWasmerSinglepassPC(tinygoWasmBytecode_oz)},
-		{"wasmer/cranelift/o2", newWasmerCraneliftPC(tinygoWasmBytecode_o2)},
-		{"wasmer/cranelift/oz", newWasmerCraneliftPC(tinygoWasmBytecode_oz)},
+		code []byte
+	}{
+		{"wazero/interpreted/o2", wasm.NewWazeroPrecompileWithConfig(tinygoWasmBytecode_o2, wazero.NewRuntimeConfigInterpreter()), tinygoWasmBytecode_o2},
+		{"wazero/interpreted/oz", wasm.NewWazeroPrecompileWithConfig(tinygoWasmBytecode_oz, wazero.NewRuntimeConfigInterpreter()), tinygoWasmBytecode_oz},
+		{"wazero/compiled/o2", wasm.NewWazeroPrecompileWithConfig(tinygoWasmBytecode_o2, wazero.NewRuntimeConfigCompiler()), tinygoWasmBytecode_o2},
+		{"wazero/compiled/oz", wasm.NewWazeroPrecompileWithConfig(tinygoWasmBytecode_oz, wazero.NewRuntimeConfigCompiler()), tinygoWasmBytecode_oz},
+		{"wasmer/singlepass/o2", wasm.NewWasmerPrecompileWithConfig(tinygoWasmBytecode_o2, wasmer.NewConfig().UseSinglepassCompiler()), tinygoWasmBytecode_o2},
+		{"wasmer/singlepass/oz", wasm.NewWasmerPrecompileWithConfig(tinygoWasmBytecode_oz, wasmer.NewConfig().UseSinglepassCompiler()), tinygoWasmBytecode_oz},
+		{"wasmer/cranelift/o2", wasm.NewWasmerPrecompileWithConfig(tinygoWasmBytecode_o2, wasmer.NewConfig().UseCraneliftCompiler()), tinygoWasmBytecode_o2},
+		{"wasmer/cranelift/oz", wasm.NewWasmerPrecompileWithConfig(tinygoWasmBytecode_oz, wasmer.NewConfig().UseCraneliftCompiler()), tinygoWasmBytecode_oz},
 	}
 
 	for _, runtime := range runtimes {
 		b.Run(runtime.name, func(b *testing.B) {
+			addCodeMetadata(b, runtime.code)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				ret, err := runtime.pc.Run(nil, nil)
@@ -149,57 +136,101 @@ func BenchmarkTinygoQuicksort(b *testing.B) {
 	}
 }
 
+func newWasmerInstance(code []byte, config *wasmer.Config) (*wasmer.Instance, error) {
+	engine := wasmer.NewEngineWithConfig(config)
+	store := wasmer.NewStore(engine)
+	module, err := wasmer.NewModule(store, code)
+	if err != nil {
+		return nil, err
+	}
+
+	importObject := wasmer.NewImportObject()
+	importObject.Register(
+		"env", map[string]wasmer.IntoExtern{
+			"abort": wasmer.NewFunction(
+				store,
+				wasmer.NewFunctionType(
+					wasmer.NewValueTypes(wasmer.I32, wasmer.I32, wasmer.I32, wasmer.I32),
+					wasmer.NewValueTypes(),
+				),
+				func([]wasmer.Value) ([]wasmer.Value, error) {
+					return nil, fmt.Errorf("abort")
+				},
+			),
+		},
+	)
+
+	instance, err := wasmer.NewInstance(module, importObject)
+	if err != nil {
+		return nil, err
+	}
+	return instance, nil
+}
+
+func newBenchWasmerInstance(b *testing.B, code []byte, config *wasmer.Config) *wasmer.Instance {
+	instance, err := newWasmerInstance(code, config)
+	if err != nil {
+		b.Fatal(err)
+	}
+	return instance
+}
+
+func benchWasmerInstance(b *testing.B, instance *wasmer.Instance) {
+	for i := 0; i < b.N; i++ {
+		run, err := instance.Exports.GetFunction("run")
+		if err != nil {
+			b.Fatal(err)
+		}
+		ret, err := run()
+		if err != nil {
+			b.Fatal(err)
+		}
+		checksum, ok := ret.(int64)
+		if !ok {
+			b.Fatal("can not convert return value to int64")
+		}
+		if !validResult(checksum) {
+			b.Fatal("invalid checksum:", checksum)
+		}
+	}
+}
+
 //go:embed testdata/rust-simple.wasm
 var rustWasmBytecode []byte
 
-func BenchmarkRustQuicksort(b *testing.B) {
-	compiler := []struct {
-		name string
+//go:embed testdata/assemblyscript.wasm
+var assemblyScriptBytecode []byte
+
+func BenchmarkWasmRustQuicksort(b *testing.B) {
+	benchCases := []struct {
+		name     string
+		instance *wasmer.Instance
 	}{
-		{"cranelift"},
-		{"singlepass"},
+		{"wasmer/singlepass", newBenchWasmerInstance(b, rustWasmBytecode, wasmer.NewConfig().UseSinglepassCompiler())},
+		{"wasmer/cranelift", newBenchWasmerInstance(b, rustWasmBytecode, wasmer.NewConfig().UseCraneliftCompiler())},
 	}
-	for _, compiler := range compiler {
-		b.Run(fmt.Sprintf("wasmer/%s", compiler.name), func(b *testing.B) {
-			config := wasmer.NewConfig()
-			if compiler.name == "singlepass" {
-				config.UseSinglepassCompiler()
-			} else if compiler.name == "cranelift" {
-				config.UseCraneliftCompiler()
-			} else {
-				b.Fatal("invalid compiler:", compiler.name)
-			}
-
-			engine := wasmer.NewEngineWithConfig(config)
-			store := wasmer.NewStore(engine)
-			module, err := wasmer.NewModule(store, rustWasmBytecode)
-			if err != nil {
-				b.Fatal(err)
-			}
-			importObject := wasmer.NewImportObject()
-			instance, err := wasmer.NewInstance(module, importObject)
-			if err != nil {
-				b.Fatal(err)
-			}
-			run, err := instance.Exports.GetFunction("run")
-			if err != nil {
-				b.Fatal(err)
-			}
-
+	for _, bc := range benchCases {
+		b.Run(bc.name, func(b *testing.B) {
+			addCodeMetadata(b, rustWasmBytecode)
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				ret, err := run()
-				if err != nil {
-					b.Fatal(err)
-				}
-				checksum, ok := ret.(int64)
-				if !ok {
-					b.Fatal("can not convert return value to int64:", ret)
-				}
-				if !validResult(checksum) {
-					b.Fatal("invalid checksum:", checksum)
-				}
-			}
+			benchWasmerInstance(b, bc.instance)
+		})
+	}
+}
+
+func BenchmarkWasmAssemblyScriptQuicksort(b *testing.B) {
+	benchCases := []struct {
+		name     string
+		instance *wasmer.Instance
+	}{
+		{"wasmer/singlepass", newBenchWasmerInstance(b, assemblyScriptBytecode, wasmer.NewConfig().UseSinglepassCompiler())},
+		{"wasmer/cranelift", newBenchWasmerInstance(b, assemblyScriptBytecode, wasmer.NewConfig().UseCraneliftCompiler())},
+	}
+	for _, bc := range benchCases {
+		b.Run(bc.name, func(b *testing.B) {
+			addCodeMetadata(b, assemblyScriptBytecode)
+			b.ResetTimer()
+			benchWasmerInstance(b, bc.instance)
 		})
 	}
 }

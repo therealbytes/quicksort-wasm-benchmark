@@ -56,4 +56,4 @@ require (
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/therealbytes/concrete-geth-private v0.0.0-20230831103723-c60325f4bce7
+replace github.com/ethereum/go-ethereum => github.com/therealbytes/concrete-geth-private v0.0.0-20230919082922-9ec06660bec3

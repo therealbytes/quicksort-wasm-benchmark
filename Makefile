@@ -1,6 +1,10 @@
-.PHONY: all evm solidity wasm tinygo rust zig assemblyscript benchmark benchmark-native-rust
+.PHONY: all prepare evm solidity wasm tinygo rust zig assemblyscript benchmark benchmark-native-rust
 
-all: evm wasm benchmark
+all: prepare evm wasm benchmark-arrlen-many
+
+prepare:
+	mkdir -p testdata
+	mkdir -p results
 
 evm: solidity
 
@@ -11,11 +15,12 @@ solidity:
 wasm: tinygo rust assemblyscript
 
 tinygo:
-	tinygo build -opt=2 -no-debug -o testdata/tinygo_o2.wasm -target=wasi ./tinygo/main.go
-	tinygo build -opt=z -no-debug -o testdata/tinygo_oz.wasm -target=wasi ./tinygo/main.go
+	tinygo build -opt=2 -no-debug -o testdata/tinygo_o2.wasm -target=wasi tinygo/main.go
+	tinygo build -opt=s -no-debug -o testdata/tinygo_oz.wasm -target=wasi tinygo/main.go
 
 rust:
-	rustc -O -o testdata/rust.wasm --target wasm32-unknown-unknown --crate-type cdylib rust/src/main.rs
+	rustc -C opt-level=2 -o testdata/rust_o2.wasm --target wasm32-unknown-unknown --crate-type cdylib rust/src/main.rs
+	rustc -C opt-level=s -o testdata/rust_os.wasm --target wasm32-unknown-unknown --crate-type cdylib rust/src/main.rs
 
 zig:
 	cd zig && zig build -Doptimize=ReleaseFast
@@ -29,10 +34,17 @@ assemblyscript:
 
 benchmark:
 	go test -bench . -benchmem | tee benchmark_output.txt
-	echo "Benchmark,Size,Iterations,ns/op,Bytes/op,Allocs/op" > benchmark_results.csv
-	awk '/Benchmark/ { print $$1 "," $$5 "," $$2 "," $$3 "," $$7 "," $$9 }' benchmark_output.txt >> benchmark_results.csv
+	echo "Benchmark,Size,Iterations,ns/op,Bytes/op,Allocs/op" > results/benchmark_results.csv
+	awk '/Benchmark/ { print $$1 "," $$5 "," $$2 "," $$3 "," $$7 "," $$9 }' benchmark_output.txt >> results/benchmark_results.csv
 	rm benchmark_output.txt
+
+benchmark-arrlen: benchmark
+	mv results/benchmark_results.csv results/benchmark_results_$(ARRLEN).csv
+
+benchmark-arrlen-many:
+	ARRLEN=10 $(MAKE) benchmark-arrlen
+	ARRLEN=100 $(MAKE) benchmark-arrlen
+	ARRLEN=1000 $(MAKE) benchmark-arrlen
 
 benchmark-native-rust:
 	cd rust && cargo +nightly bench
-

@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"os"
+	"strconv"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -30,8 +32,24 @@ var (
 )
 
 func init() {
+	seed = uint(getEnvVarInt("SEED", int(seed)))
+	arrLen = getEnvVarInt("ARRLEN", arrLen)
+	iter = getEnvVarInt("ITER", iter)
+
 	benchmark := quicksort.NewQuicksortBenchmark(seed)
 	expectedChecksum = benchmark.Run(arrLen, iter)
+}
+
+func getEnvVarInt(name string, defaultValue int) int {
+	strVal := os.Getenv(name)
+	if strVal == "" {
+		return defaultValue
+	}
+	intVal, err := strconv.Atoi(strVal)
+	if err != nil {
+		panic(err)
+	}
+	return intVal
 }
 
 func validResult(checksum uint) bool {
@@ -263,33 +281,41 @@ func benchWasm3Func(b *testing.B, run wasm3.FunctionWrapper, code []byte) {
 	}
 }
 
-//go:embed testdata/rust.wasm
-var rustWasmBytecode []byte
+//go:embed testdata/rust_o2.wasm
+var rustWasmBytecode_o2 []byte
+
+//go:embed testdata/rust_os.wasm
+var rustWasmBytecode_os []byte
 
 func BenchmarkWasmRust(b *testing.B) {
 	wasmerCases := []struct {
 		name     string
+		code     []byte
 		instance *wasmer.Instance
 	}{
-		{"wasmer/singlepass", newBenchWasmerInstance(b, rustWasmBytecode, wasmer.NewConfig().UseSinglepassCompiler())},
-		{"wasmer/cranelift", newBenchWasmerInstance(b, rustWasmBytecode, wasmer.NewConfig().UseCraneliftCompiler())},
+		{"wasmer/singlepass/o2", rustWasmBytecode_o2, newBenchWasmerInstance(b, rustWasmBytecode_o2, wasmer.NewConfig().UseSinglepassCompiler())},
+		{"wasmer/singlepass/os", rustWasmBytecode_os, newBenchWasmerInstance(b, rustWasmBytecode_os, wasmer.NewConfig().UseSinglepassCompiler())},
+		{"wasmer/cranelift/o2", rustWasmBytecode_o2, newBenchWasmerInstance(b, rustWasmBytecode_o2, wasmer.NewConfig().UseCraneliftCompiler())},
+		{"wasmer/cranelift/os", rustWasmBytecode_os, newBenchWasmerInstance(b, rustWasmBytecode_os, wasmer.NewConfig().UseCraneliftCompiler())},
 	}
 	for _, bc := range wasmerCases {
 		b.Run(bc.name, func(b *testing.B) {
 			b.ResetTimer()
-			benchWasmerInstance(b, bc.instance, rustWasmBytecode)
+			benchWasmerInstance(b, bc.instance, bc.code)
 		})
 	}
 	wasm3Cases := []struct {
 		name string
+		code []byte
 		run  wasm3.FunctionWrapper
 	}{
-		{"wasm3", newBenchWasm3Func(b, rustWasmBytecode)},
+		{"wasm3/os", rustWasmBytecode_os, newBenchWasm3Func(b, rustWasmBytecode_os)},
+		{"wasm3/o2", rustWasmBytecode_o2, newBenchWasm3Func(b, rustWasmBytecode_o2)},
 	}
 	for _, bc := range wasm3Cases {
 		b.Run(bc.name, func(b *testing.B) {
 			b.ResetTimer()
-			benchWasm3Func(b, bc.run, rustWasmBytecode)
+			benchWasm3Func(b, bc.run, bc.code)
 		})
 	}
 }

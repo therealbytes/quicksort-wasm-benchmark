@@ -223,9 +223,6 @@ func benchWasmerInstance(b *testing.B, instance *wasmer.Instance, code []byte) {
 //go:embed testdata/rust.wasm
 var rustWasmBytecode []byte
 
-//go:embed testdata/assemblyscript.wasm
-var assemblyScriptBytecode []byte
-
 func BenchmarkWasmRust(b *testing.B) {
 	benchCases := []struct {
 		name     string
@@ -242,6 +239,9 @@ func BenchmarkWasmRust(b *testing.B) {
 	}
 }
 
+//go:embed testdata/assemblyscript.wasm
+var assemblyScriptBytecode []byte
+
 func BenchmarkWasmAssemblyScript(b *testing.B) {
 	benchCases := []struct {
 		name     string
@@ -254,6 +254,31 @@ func BenchmarkWasmAssemblyScript(b *testing.B) {
 		b.Run(bc.name, func(b *testing.B) {
 			b.ResetTimer()
 			benchWasmerInstance(b, bc.instance, assemblyScriptBytecode)
+		})
+	}
+}
+
+//go:embed testdata/zig_fast.wasm
+var zigBytecode_fast []byte
+
+//go:embed testdata/zig_small.wasm
+var zigBytecode_small []byte
+
+func BenchmarkWasmZig(b *testing.B) {
+	benchCases := []struct {
+		name     string
+		code     []byte
+		instance *wasmer.Instance
+	}{
+		{"wasmer/singlepass/fast", zigBytecode_fast, newBenchWasmerInstance(b, zigBytecode_fast, wasmer.NewConfig().UseSinglepassCompiler())},
+		{"wasmer/singlepass/small", zigBytecode_small, newBenchWasmerInstance(b, zigBytecode_small, wasmer.NewConfig().UseSinglepassCompiler())},
+		{"wasmer/cranelift/fast", zigBytecode_fast, newBenchWasmerInstance(b, zigBytecode_fast, wasmer.NewConfig().UseCraneliftCompiler())},
+		{"wasmer/cranelift/small", zigBytecode_small, newBenchWasmerInstance(b, zigBytecode_small, wasmer.NewConfig().UseCraneliftCompiler())},
+	}
+	for _, bc := range benchCases {
+		b.Run(bc.name, func(b *testing.B) {
+			b.ResetTimer()
+			benchWasmerInstance(b, bc.instance, bc.code)
 		})
 	}
 }

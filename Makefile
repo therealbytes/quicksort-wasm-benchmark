@@ -1,4 +1,4 @@
-.PHONY: all evm solidity wasm tinygo rust assemblyscript benchmark benchmark-native-rust
+.PHONY: all evm solidity wasm tinygo rust zig assemblyscript benchmark benchmark-native-rust
 
 all: evm wasm benchmark
 
@@ -16,6 +16,12 @@ tinygo:
 
 rust:
 	rustc -O -o testdata/rust.wasm --target wasm32-unknown-unknown --crate-type cdylib rust/src/main.rs
+
+zig:
+	cd zig && zig build -Doptimize=ReleaseFast
+	cp zig/zig-out/lib/zig.wasm testdata/zig_fast.wasm
+	cd zig && zig build -Doptimize=ReleaseSmall
+	cp zig/zig-out/lib/zig.wasm testdata/zig_small.wasm
 
 assemblyscript:
 	cd assemblyscript && npm run asbuild

@@ -1,9 +1,7 @@
 const std = @import("std");
 const bindings = @import("./concrete/bindings.zig");
 const memory = @import("./concrete/memory.zig");
-const mem_pointer = memory.mem_pointer;
 const sort = @import("sort.zig");
-const expect = std.testing.expect;
 
 extern "env" fn concrete_Environment(pointer: u64) u64;
 

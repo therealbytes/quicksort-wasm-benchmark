@@ -1,5 +1,4 @@
 const std = @import("std");
-const allocator = std.heap.page_allocator;
 const memory = @import("memory.zig");
 const mem_pointer = memory.mem_pointer;
 

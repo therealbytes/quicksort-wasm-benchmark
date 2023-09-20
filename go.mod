@@ -3,7 +3,8 @@ module github.com/therealbytes/concrete-sort
 go 1.19
 
 require (
-	github.com/ethereum/go-ethereum v1.12.2
+	github.com/ethereum/go-ethereum v0.0.0
+	github.com/matiasinsaurralde/go-wasm3 v0.0.0-20220822154643-94c5ed3e86a3
 	github.com/tetratelabs/wazero v1.1.0
 	github.com/wasmerio/wasmer-go v1.0.4
 )

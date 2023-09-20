@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/matiasinsaurralde/go-wasm3"
 	"github.com/tetratelabs/wazero"
 	"github.com/therealbytes/concrete-sort/quicksort"
 	"github.com/wasmerio/wasmer-go/wasmer"
@@ -199,11 +200,11 @@ func newBenchWasmerInstance(b *testing.B, code []byte, config *wasmer.Config) *w
 }
 
 func benchWasmerInstance(b *testing.B, instance *wasmer.Instance, code []byte) {
+	run, err := instance.Exports.GetFunction("run")
+	if err != nil {
+		b.Fatal(err)
+	}
 	for i := 0; i < b.N; i++ {
-		run, err := instance.Exports.GetFunction("run")
-		if err != nil {
-			b.Fatal(err)
-		}
 		ret, err := run(int64(seed), int64(arrLen), int64(iter))
 		if err != nil {
 			b.Fatal(err)
@@ -220,21 +221,75 @@ func benchWasmerInstance(b *testing.B, instance *wasmer.Instance, code []byte) {
 	}
 }
 
+func newWasm3Func(code []byte) (wasm3.FunctionWrapper, error) {
+	runtime := wasm3.NewRuntime(&wasm3.Config{
+		Environment: wasm3.NewEnvironment(),
+		StackSize:   64 * 1024,
+	})
+	module, err := runtime.ParseModule(code)
+	if err != nil {
+		return nil, err
+	}
+	_, err = runtime.LoadModule(module)
+	if err != nil {
+		return nil, err
+	}
+	run, err := runtime.FindFunction("run")
+	if err != nil {
+		return nil, err
+	}
+	return run, nil
+}
+
+func newBenchWasm3Func(b *testing.B, code []byte) wasm3.FunctionWrapper {
+	module, err := newWasm3Func(code)
+	if err != nil {
+		b.Fatal(err)
+	}
+	return module
+}
+
+func benchWasm3Func(b *testing.B, run wasm3.FunctionWrapper, code []byte) {
+	for i := 0; i < b.N; i++ {
+		ret, err := run(int(seed), int(arrLen), int(iter))
+		if err != nil {
+			b.Fatal(err)
+		}
+		checksum := uint(ret)
+		if !validResult(checksum) {
+			b.Fatal("invalid checksum:", checksum)
+		}
+		reportCodeMetadata(b, code)
+	}
+}
+
 //go:embed testdata/rust.wasm
 var rustWasmBytecode []byte
 
 func BenchmarkWasmRust(b *testing.B) {
-	benchCases := []struct {
+	wasmerCases := []struct {
 		name     string
 		instance *wasmer.Instance
 	}{
 		{"wasmer/singlepass", newBenchWasmerInstance(b, rustWasmBytecode, wasmer.NewConfig().UseSinglepassCompiler())},
 		{"wasmer/cranelift", newBenchWasmerInstance(b, rustWasmBytecode, wasmer.NewConfig().UseCraneliftCompiler())},
 	}
-	for _, bc := range benchCases {
+	for _, bc := range wasmerCases {
 		b.Run(bc.name, func(b *testing.B) {
 			b.ResetTimer()
 			benchWasmerInstance(b, bc.instance, rustWasmBytecode)
+		})
+	}
+	wasm3Cases := []struct {
+		name string
+		run  wasm3.FunctionWrapper
+	}{
+		{"wasm3", newBenchWasm3Func(b, rustWasmBytecode)},
+	}
+	for _, bc := range wasm3Cases {
+		b.Run(bc.name, func(b *testing.B) {
+			b.ResetTimer()
+			benchWasm3Func(b, bc.run, rustWasmBytecode)
 		})
 	}
 }
@@ -243,14 +298,14 @@ func BenchmarkWasmRust(b *testing.B) {
 var assemblyScriptBytecode []byte
 
 func BenchmarkWasmAssemblyScript(b *testing.B) {
-	benchCases := []struct {
+	wasmerCases := []struct {
 		name     string
 		instance *wasmer.Instance
 	}{
 		{"wasmer/singlepass", newBenchWasmerInstance(b, assemblyScriptBytecode, wasmer.NewConfig().UseSinglepassCompiler())},
 		{"wasmer/cranelift", newBenchWasmerInstance(b, assemblyScriptBytecode, wasmer.NewConfig().UseCraneliftCompiler())},
 	}
-	for _, bc := range benchCases {
+	for _, bc := range wasmerCases {
 		b.Run(bc.name, func(b *testing.B) {
 			b.ResetTimer()
 			benchWasmerInstance(b, bc.instance, assemblyScriptBytecode)
@@ -265,7 +320,7 @@ var zigBytecode_fast []byte
 var zigBytecode_small []byte
 
 func BenchmarkWasmZig(b *testing.B) {
-	benchCases := []struct {
+	wasmerCases := []struct {
 		name     string
 		code     []byte
 		instance *wasmer.Instance
@@ -275,7 +330,7 @@ func BenchmarkWasmZig(b *testing.B) {
 		{"wasmer/cranelift/fast", zigBytecode_fast, newBenchWasmerInstance(b, zigBytecode_fast, wasmer.NewConfig().UseCraneliftCompiler())},
 		{"wasmer/cranelift/small", zigBytecode_small, newBenchWasmerInstance(b, zigBytecode_small, wasmer.NewConfig().UseCraneliftCompiler())},
 	}
-	for _, bc := range benchCases {
+	for _, bc := range wasmerCases {
 		b.Run(bc.name, func(b *testing.B) {
 			b.ResetTimer()
 			benchWasmerInstance(b, bc.instance, bc.code)

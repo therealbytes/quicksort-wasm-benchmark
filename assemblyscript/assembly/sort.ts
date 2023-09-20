@@ -1,23 +1,18 @@
-export const SEED: u64 = 7;
-export const L: i32 = 1000;
-export const N: i32 = 100;
-export const CHECKSUM: u64 = 107829970005;
+export class QuicksortBenchmark {
+  seed: u32;
 
-export class Quicksort {
-  seed: u64;
-
-  constructor(seed: u64) {
+  constructor(seed: u32) {
     this.seed = seed;
   }
 
   random(): u32 {
     this.seed = (1103515245 * this.seed + 12345) % (1 << 31);
-    return <u32>(this.seed % (<u64>u32.MAX_VALUE + 1));
+    return this.seed;
   }
 
   randomizeArray(arr: u32[]): void {
     for (let i = 0; i < arr.length; i++) {
-      arr[i] = this.random();
+      arr[i] = this.random() % 1000;
     }
   }
 
@@ -55,13 +50,13 @@ export class Quicksort {
     }
   }
 
-  benchmark(): u64 {
-    let checksum: u64 = 0;
-    let arr = new Array<u32>(L).fill(0);
-    for (let _ = 0; _ < N; _++) {
+  run(arrLen: u32, iter: u32): u32 {
+    let checksum: u32 = 0;
+    let arr = new Array<u32>(arrLen).fill(0);
+    for (let _: u32 = 0; _ < iter; _++) {
       this.randomizeArray(arr);
-      this.quickSort(arr, 0, L - 1);
-      checksum += <u64>arr[L / 2];
+      this.quickSort(arr, 0, arrLen - 1);
+      checksum += arr[arrLen / 2];
     }
     return checksum;
   }

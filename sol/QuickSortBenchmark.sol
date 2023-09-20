@@ -1,15 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "forge-std/console2.sol";
+// import "forge-std/console2.sol";
 
-uint256 constant SEED = 7;
-uint256 constant L = 1000;
-uint256 constant N = 100;
-// uint256 constant CHECKSUM = 107829970005;
-
-contract Quicksort {
-    uint256 public seed = SEED;
+contract QuickSortBenchmark {
+    uint256 public seed;
 
     function random() internal returns (uint256) {
         seed = (1103515245 * uint(seed) + 12345) % (1 << 31);
@@ -18,7 +13,7 @@ contract Quicksort {
 
     function randomizeArray(uint256[] memory arr) internal {
         for (uint256 i = 0; i < arr.length; i++) {
-            arr[i] = random();
+            arr[i] = random() % 1000;
         }
     }
 
@@ -40,14 +35,14 @@ contract Quicksort {
         if (i < right) quicksort(arr, i, right);
     }
 
-    function benchmark() public returns (uint256) {
-        seed = 7;
+    function run(uint256 _seed, uint256 arrLen, uint256 iter) public returns (uint256) {
+        seed = _seed;
         uint256 checksum = 0;
-        uint256[] memory arr = new uint256[](L);
-        for (uint256 i = 0; i < N; i++) {
+        uint256[] memory arr = new uint256[](arrLen);
+        for (uint256 i = 0; i < iter; i++) {
             randomizeArray(arr);
-            quicksort(arr, 0, int256(arr.length - 1));
-            checksum += arr[L / 2];
+            quicksort(arr, 0, int256(arrLen - 1));
+            checksum += arr[arrLen / 2];
         }
         return checksum;
     }

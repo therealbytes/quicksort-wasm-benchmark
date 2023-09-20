@@ -6,7 +6,7 @@ evm: solidity
 
 solidity:
 	forge build --optimizer-runs 1000 --sizes
-	jq -r '.deployedBytecode.object' out/Quicksort.sol/Quicksort.json > testdata/quicksort.evm
+	jq -r '.deployedBytecode.object' out/QuicksortBenchmark.sol/QuicksortBenchmark.json > testdata/solidity.evm
 
 wasm: tinygo rust assemblyscript
 
@@ -15,7 +15,7 @@ tinygo:
 	tinygo build -opt=z -no-debug -o testdata/tinygo_oz.wasm -target=wasi ./tinygo/main.go
 
 rust:
-	rustc -O -o testdata/rust-simple.wasm --target wasm32-unknown-unknown --crate-type cdylib rust/src/main.rs
+	rustc -O -o testdata/rust.wasm --target wasm32-unknown-unknown --crate-type cdylib rust/src/main.rs
 
 assemblyscript:
 	cd assemblyscript && npm run asbuild

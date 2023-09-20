@@ -1,0 +1,19 @@
+Benchmark                                       ,Size    ,Iterations ,ns/op   ,Bytes/op ,Allocs/op
+BenchmarkGo-8                                   ,      0 ,    130546 ,   9356 ,      80 ,        1
+BenchmarkEVM-8                                  ,   2697 ,       145 ,8343222 ,  161243 ,     1018
+BenchmarkWasmTinygo/wazero/interpreted/o2-8     , 409457 ,       784 ,1540535 ,   11555 ,      486
+BenchmarkWasmTinygo/wazero/interpreted/oz-8     , 352135 ,       673 ,1812536 ,   26812 ,     1122
+BenchmarkWasmTinygo/wazero/compiled/o2-8        , 409457 ,     18742 ,  64245 ,     160 ,       12
+BenchmarkWasmTinygo/wazero/compiled/oz-8        , 352135 ,     17004 ,  67930 ,     160 ,       12
+BenchmarkWasmTinygo/wasmer/singlepass/o2-8      , 409457 ,     19052 ,  63089 ,    1160 ,       84
+BenchmarkWasmTinygo/wasmer/singlepass/oz-8      , 352135 ,     17614 ,  76520 ,    1160 ,       84
+BenchmarkWasmTinygo/wasmer/cranelift/o2-8       , 409457 ,     27657 ,  42914 ,    1160 ,       84
+BenchmarkWasmTinygo/wasmer/cranelift/oz-8       , 352135 ,     26356 ,  45692 ,    1160 ,       84
+BenchmarkWasmRust/wasmer/singlepass-8           ,1830808 ,     34536 ,  36300 ,     496 ,       24
+BenchmarkWasmRust/wasmer/cranelift-8            ,1830808 ,     77413 ,  16532 ,     496 ,       24
+BenchmarkWasmAssemblyScript/wasmer/singlepass-8 ,   5242 ,      7278 , 166499 ,     496 ,       24
+BenchmarkWasmAssemblyScript/wasmer/cranelift-8  ,   5242 ,     10000 , 100044 ,     496 ,       24
+BenchmarkWasmZig/wasmer/singlepass/fast-8       , 513757 ,     33787 ,  33278 ,     496 ,       24
+BenchmarkWasmZig/wasmer/singlepass/small-8      ,   1745 ,     33834 ,  39711 ,     496 ,       24
+BenchmarkWasmZig/wasmer/cranelift/fast-8        , 513757 ,     84471 ,  14117 ,     496 ,       24
+BenchmarkWasmZig/wasmer/cranelift/small-8       ,   1745 ,     58326 ,  26723 ,     496 ,       24

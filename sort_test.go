@@ -1,8 +1,8 @@
 package main
 
 import (
+	"context"
 	_ "embed"
-	"encoding/binary"
 	"fmt"
 	"math/big"
 	"os"
@@ -11,8 +11,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/concrete"
-	"github.com/ethereum/go-ethereum/concrete/wasm"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -20,25 +18,46 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/matiasinsaurralde/go-wasm3"
 	"github.com/tetratelabs/wazero"
+	wz_api "github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 	"github.com/therealbytes/concrete-sort/quicksort"
 	"github.com/wasmerio/wasmer-go/wasmer"
 )
 
-var (
-	seed             uint = 7
-	arrLen                = 1000
-	iter                  = 100
-	expectedChecksum uint = 0
+type LanguageName string
+
+const (
+	Go             LanguageName = "Go"
+	Sol            LanguageName = "Solidity"
+	TinyGo         LanguageName = "TinyGo"
+	Rust           LanguageName = "Rust"
+	AssemblyScript LanguageName = "AssemblyScript"
+	Zig            LanguageName = "Zig"
 )
 
-func init() {
-	seed = uint(getEnvVarInt("SEED", int(seed)))
-	arrLen = getEnvVarInt("ARRLEN", arrLen)
-	iter = getEnvVarInt("ITER", iter)
+type WasmRuntimeName string
 
-	benchmark := quicksort.NewQuicksortBenchmark(seed)
-	expectedChecksum = benchmark.Run(arrLen, iter)
-}
+const (
+	Wazero WasmRuntimeName = "Wazero"
+	Wasmer WasmRuntimeName = "Wasmer"
+	Wasm3  WasmRuntimeName = "Wasm3"
+)
+
+var (
+	Seed   = getEnvVarInt("SEED", 0)
+	ArrLen = getEnvVarInt("ARRLEN", 1000)
+	Iter   = getEnvVarInt("ITER", 100)
+)
+
+var (
+	BenchTinyGo = getEnvVarBool("TINYGO", true)
+	BenchRust   = getEnvVarBool("RUST", true)
+	BenchAs     = getEnvVarBool("ASSEMBLYSCRIPT", true)
+	BenchZig    = getEnvVarBool("ZIG", true)
+	BenchWazero = getEnvVarBool("WAZERO", true)
+	BenchWasmer = getEnvVarBool("WASMER", true)
+	BenchWasm3  = getEnvVarBool("WASM3", true)
+)
 
 func getEnvVarInt(name string, defaultValue int) int {
 	strVal := os.Getenv(name)
@@ -52,8 +71,141 @@ func getEnvVarInt(name string, defaultValue int) int {
 	return intVal
 }
 
-func validResult(checksum uint) bool {
-	return checksum == expectedChecksum
+func getEnvVarBool(name string, defaultValue bool) bool {
+	strVal := os.Getenv(name)
+	if strVal == "" {
+		return defaultValue
+	}
+	boolVal, err := strconv.ParseBool(strVal)
+	if err != nil {
+		panic(err)
+	}
+	return boolVal
+}
+
+//go:embed testdata/solidity.evm
+var evmBytecodeHex []byte
+
+//go:embed testdata/tinygo_o2.wasm
+var tinygoWasmBytecode_o2 []byte
+
+//go:embed testdata/tinygo_oz.wasm
+var tinygoWasmBytecode_oz []byte
+
+//go:embed testdata/rust_o2.wasm
+var rustWasmBytecode_o2 []byte
+
+//go:embed testdata/rust_os.wasm
+var rustWasmBytecode_os []byte
+
+//go:embed testdata/assemblyscript.wasm
+var assemblyScriptBytecode []byte
+
+//go:embed testdata/zig_fast.wasm
+var zigBytecode_fast []byte
+
+//go:embed testdata/zig_small.wasm
+var zigBytecode_small []byte
+
+type Runtime struct {
+	Name      WasmRuntimeName
+	ConfigStr string
+}
+
+type Binary struct {
+	Code               []byte
+	CompilerOptionsStr string
+}
+
+type Benchmark struct {
+	Language LanguageName
+	Runtimes []Runtime
+	Binaries []Binary
+}
+
+type BenchmarkRunner interface {
+	Run(seed int, arrLen int, iter int) (uint, error)
+}
+
+var (
+	WazeroCompiled    = Runtime{Name: Wazero, ConfigStr: "Compiled"}
+	WazeroInterpreted = Runtime{Name: Wazero, ConfigStr: "Interpreted"}
+	WasmerCranelift   = Runtime{Name: Wasmer, ConfigStr: "Cranelift"}
+	WasmerSinglepass  = Runtime{Name: Wasmer, ConfigStr: "Singlepass"}
+	Wasm3Interpreted  = Runtime{Name: Wasm3, ConfigStr: "Interpreted"}
+)
+
+var (
+	TinyGoO2 = Binary{Code: tinygoWasmBytecode_o2, CompilerOptionsStr: "o2"}
+	TinyGoOz = Binary{Code: tinygoWasmBytecode_oz, CompilerOptionsStr: "oz"}
+	RustO2   = Binary{Code: rustWasmBytecode_o2, CompilerOptionsStr: "o2"}
+	RustOs   = Binary{Code: rustWasmBytecode_os, CompilerOptionsStr: "os"}
+	As       = Binary{Code: assemblyScriptBytecode, CompilerOptionsStr: "optimize=3shrink=1"}
+	ZigFast  = Binary{Code: zigBytecode_fast, CompilerOptionsStr: "ReleaseFast"}
+	ZigSmall = Binary{Code: zigBytecode_small, CompilerOptionsStr: "ReleaseSmall"}
+)
+
+var WasmBenchmarks = []Benchmark{
+	{
+		Language: TinyGo,
+		Runtimes: []Runtime{
+			WazeroCompiled,
+			WazeroInterpreted,
+			WasmerCranelift,
+			WasmerSinglepass,
+		},
+		Binaries: []Binary{
+			TinyGoO2,
+			TinyGoOz,
+		},
+	},
+	{
+		Language: Rust,
+		Runtimes: []Runtime{
+			WazeroCompiled,
+			WazeroInterpreted,
+			WasmerCranelift,
+			WasmerSinglepass,
+			Wasm3Interpreted,
+		},
+		Binaries: []Binary{
+			RustO2,
+			RustOs,
+		},
+	},
+	{
+		Language: AssemblyScript,
+		Runtimes: []Runtime{
+			WazeroCompiled,
+			WazeroInterpreted,
+			WasmerCranelift,
+			WasmerSinglepass,
+		},
+		Binaries: []Binary{
+			As,
+		},
+	},
+	{
+		Language: Zig,
+		Runtimes: []Runtime{
+			WazeroCompiled,
+			WazeroInterpreted,
+			WasmerCranelift,
+			WasmerSinglepass,
+		},
+		Binaries: []Binary{
+			ZigFast,
+			ZigSmall,
+		},
+	},
+}
+
+var (
+	ExpectedChecksum = int(quicksort.NewQuicksortBenchmark(uint(Seed)).Run(ArrLen, Iter))
+)
+
+func validResult(checksum int) bool {
+	return checksum == ExpectedChecksum
 }
 
 func reportCodeMetadata(b *testing.B, code []byte) {
@@ -63,17 +215,14 @@ func reportCodeMetadata(b *testing.B, code []byte) {
 func BenchmarkGo(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		benchmark := quicksort.NewQuicksortBenchmark(seed)
-		checksum := benchmark.Run(arrLen, iter)
-		if !validResult(checksum) {
+		benchmark := quicksort.NewQuicksortBenchmark(uint(Seed))
+		checksum := benchmark.Run(ArrLen, Iter)
+		if !validResult(int(checksum)) {
 			b.Fatal("invalid checksum:", checksum)
 		}
 		reportCodeMetadata(b, []byte{})
 	}
 }
-
-//go:embed testdata/solidity.evm
-var evmBytecodeHex []byte
 
 func BenchmarkEVM(b *testing.B) {
 	var (
@@ -110,9 +259,9 @@ func BenchmarkEVM(b *testing.B) {
 	evm := vm.NewEVM(context, txContext, statedb, params.TestChainConfig, vm.Config{})
 
 	input := common.Hex2Bytes("24b912e5")
-	input = append(input, math.U256Bytes(big.NewInt(int64(seed)))...)
-	input = append(input, math.U256Bytes(big.NewInt(int64(arrLen)))...)
-	input = append(input, math.U256Bytes(big.NewInt(int64(iter)))...)
+	input = append(input, math.U256Bytes(big.NewInt(int64(Seed)))...)
+	input = append(input, math.U256Bytes(big.NewInt(int64(ArrLen)))...)
+	input = append(input, math.U256Bytes(big.NewInt(int64(Iter)))...)
 
 	var ret []byte
 	var gasLeft uint64
@@ -123,7 +272,7 @@ func BenchmarkEVM(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
-		checksum := uint(new(big.Int).SetBytes(ret).Int64())
+		checksum := int(new(big.Int).SetBytes(ret).Int64())
 		if !validResult(checksum) {
 			b.Fatal("invalid checksum:", checksum)
 		}
@@ -133,233 +282,228 @@ func BenchmarkEVM(b *testing.B) {
 	}
 }
 
-//go:embed testdata/tinygo_o2.wasm
-var tinygoWasmBytecode_o2 []byte
+func BenchmarkWasm(b *testing.B) {
+	for _, benchmark := range WasmBenchmarks {
+		for _, runtime := range benchmark.Runtimes {
+			for _, binary := range benchmark.Binaries {
+				name := fmt.Sprintf("%s_%s_%s_%s", benchmark.Language, runtime.Name, runtime.ConfigStr, binary.CompilerOptionsStr)
+				b.Run(name, func(b *testing.B) {
 
-//go:embed testdata/tinygo_oz.wasm
-var tinygoWasmBytecode_oz []byte
+					switch {
+					case benchmark.Language == TinyGo && !BenchTinyGo:
+						b.Skip("skipping")
+					case benchmark.Language == Rust && !BenchRust:
+						b.Skip("skipping")
+					case benchmark.Language == AssemblyScript && !BenchAs:
+						b.Skip("skipping")
+					case benchmark.Language == Zig && !BenchZig:
+						b.Skip("skipping")
+					case runtime.Name == Wazero && !BenchWazero:
+						b.Skip("skipping")
+					case runtime.Name == Wasmer && !BenchWasmer:
+						b.Skip("skipping")
+					case runtime.Name == Wasm3 && !BenchWasm3:
+						b.Skip("skipping")
+					}
 
-func BenchmarkWasmTinygo(b *testing.B) {
-	runtimes := []struct {
-		name string
-		code []byte
-		pc   concrete.Precompile
-	}{
-		{"wazero/interpreted/o2", tinygoWasmBytecode_o2, wasm.NewWazeroPrecompileWithConfig(tinygoWasmBytecode_o2, wazero.NewRuntimeConfigInterpreter())},
-		{"wazero/interpreted/oz", tinygoWasmBytecode_oz, wasm.NewWazeroPrecompileWithConfig(tinygoWasmBytecode_oz, wazero.NewRuntimeConfigInterpreter())},
-		{"wazero/compiled/o2", tinygoWasmBytecode_o2, wasm.NewWazeroPrecompileWithConfig(tinygoWasmBytecode_o2, wazero.NewRuntimeConfigCompiler())},
-		{"wazero/compiled/oz", tinygoWasmBytecode_oz, wasm.NewWazeroPrecompileWithConfig(tinygoWasmBytecode_oz, wazero.NewRuntimeConfigCompiler())},
-		{"wasmer/singlepass/o2", tinygoWasmBytecode_o2, wasm.NewWasmerPrecompileWithConfig(tinygoWasmBytecode_o2, wasmer.NewConfig().UseSinglepassCompiler())},
-		{"wasmer/singlepass/oz", tinygoWasmBytecode_oz, wasm.NewWasmerPrecompileWithConfig(tinygoWasmBytecode_oz, wasmer.NewConfig().UseSinglepassCompiler())},
-		{"wasmer/cranelift/o2", tinygoWasmBytecode_o2, wasm.NewWasmerPrecompileWithConfig(tinygoWasmBytecode_o2, wasmer.NewConfig().UseCraneliftCompiler())},
-		{"wasmer/cranelift/oz", tinygoWasmBytecode_oz, wasm.NewWasmerPrecompileWithConfig(tinygoWasmBytecode_oz, wasmer.NewConfig().UseCraneliftCompiler())},
-	}
+					var runner BenchmarkRunner
+					switch runtime.Name {
+					case Wazero:
+						var config wazero.RuntimeConfig
+						switch runtime.ConfigStr {
+						case "Compiled":
+							config = wazero.NewRuntimeConfigCompiler()
+						case "Interpreted":
+							config = wazero.NewRuntimeConfigInterpreter()
+						default:
+							b.Fatal("unknown runtime config:", runtime.ConfigStr)
+						}
+						runner = newWazeroRunner(b, binary.Code, config, benchmark.Language)
 
-	input := make([]byte, 9)
-	input[0] = byte(seed)
-	binary.BigEndian.PutUint32(input[1:5], uint32(arrLen))
-	binary.BigEndian.PutUint32(input[5:9], uint32(iter))
+					case Wasmer:
+						var config *wasmer.Config
+						switch runtime.ConfigStr {
+						case "Cranelift":
+							config = wasmer.NewConfig().UseCraneliftCompiler()
+						case "Singlepass":
+							config = wasmer.NewConfig().UseSinglepassCompiler()
+						default:
+							b.Fatal("unknown runtime config:", runtime.ConfigStr)
+						}
+						runner = newWasmerRunner(b, binary.Code, config, benchmark.Language)
 
-	for _, runtime := range runtimes {
-		b.Run(runtime.name, func(b *testing.B) {
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				ret, err := runtime.pc.Run(nil, input)
-				if err != nil {
-					b.Fatal(err)
-				}
-				checksum := uint(binary.BigEndian.Uint32(ret))
-				if !validResult(checksum) {
-					b.Fatal("invalid checksum:", checksum)
-				}
-				reportCodeMetadata(b, runtime.code)
+					case Wasm3:
+						runner = newWasm3Runner(b, binary.Code, benchmark.Language)
+
+					default:
+						b.Fatal("unknown runtime:", runtime.Name)
+					}
+
+					b.ResetTimer()
+					for i := 0; i < b.N; i++ {
+						checksum, err := runner.Run(Seed, ArrLen, Iter)
+						if err != nil {
+							b.Fatal(err)
+						}
+						if !validResult(int(checksum)) {
+							b.Fatal("invalid checksum:", checksum)
+						}
+						reportCodeMetadata(b, binary.Code)
+					}
+				})
 			}
-		})
+		}
 	}
 }
 
-func newWasmerInstance(code []byte, config *wasmer.Config) (*wasmer.Instance, error) {
+type wazeroRunner struct {
+	run wz_api.Function
+}
+
+func newWazeroRunner(b *testing.B, code []byte, runtimeConfig wazero.RuntimeConfig, lang LanguageName) BenchmarkRunner {
+	var err error
+	ctx := context.Background()
+
+	r := wazero.NewRuntimeWithConfig(ctx, runtimeConfig)
+
+	if lang == AssemblyScript {
+		_, err = r.NewHostModuleBuilder("env").
+			NewFunctionBuilder().WithFunc(func(int32, int32, int32, int32) {}).Export("abort").
+			Instantiate(ctx)
+	} else {
+		_, err = r.NewHostModuleBuilder("env").Instantiate(ctx)
+	}
+	if err != nil {
+		b.Fatal(err)
+	}
+	if lang == TinyGo {
+		wasi_snapshot_preview1.MustInstantiate(ctx, r)
+	}
+
+	mod, err := r.Instantiate(ctx, code)
+	if err != nil {
+		b.Fatal(err)
+	}
+	run := mod.ExportedFunction("run")
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	return &wazeroRunner{
+		run: run,
+	}
+}
+
+func (r *wazeroRunner) Run(seed int, arrLen int, iter int) (uint, error) {
+	ctx := context.Background()
+	ret, err := r.run.Call(ctx, uint64(seed), uint64(arrLen), uint64(iter))
+	if err != nil {
+		return 0, err
+	}
+	checksum := uint(ret[0])
+	return checksum, nil
+}
+
+type wasmerRunner struct {
+	run wasmer.NativeFunction
+}
+
+func newWasmerRunner(b *testing.B, code []byte, config *wasmer.Config, lang LanguageName) BenchmarkRunner {
 	engine := wasmer.NewEngineWithConfig(config)
 	store := wasmer.NewStore(engine)
 	module, err := wasmer.NewModule(store, code)
 	if err != nil {
-		return nil, err
+		b.Fatal(err)
 	}
 
-	importObject := wasmer.NewImportObject()
-	importObject.Register(
-		"env", map[string]wasmer.IntoExtern{
-			"abort": wasmer.NewFunction(
-				store,
-				wasmer.NewFunctionType(
-					wasmer.NewValueTypes(wasmer.I32, wasmer.I32, wasmer.I32, wasmer.I32),
-					wasmer.NewValueTypes(),
+	var importObject *wasmer.ImportObject
+	if lang == TinyGo {
+		wasiEnv, err := wasmer.NewWasiStateBuilder("wasi-program").Finalize()
+		if err != nil {
+			b.Fatal(err)
+		}
+		importObject, err = wasiEnv.GenerateImportObject(store, module)
+		if err != nil {
+			b.Fatal(err)
+		}
+	} else {
+		importObject = wasmer.NewImportObject()
+	}
+	if lang == AssemblyScript {
+		importObject.Register(
+			"env", map[string]wasmer.IntoExtern{
+				"abort": wasmer.NewFunction(
+					store,
+					wasmer.NewFunctionType(
+						wasmer.NewValueTypes(wasmer.I32, wasmer.I32, wasmer.I32, wasmer.I32),
+						wasmer.NewValueTypes(),
+					),
+					func([]wasmer.Value) ([]wasmer.Value, error) {
+						return nil, fmt.Errorf("abort")
+					},
 				),
-				func([]wasmer.Value) ([]wasmer.Value, error) {
-					return nil, fmt.Errorf("abort")
-				},
-			),
-		},
-	)
+			},
+		)
+	}
 
 	instance, err := wasmer.NewInstance(module, importObject)
 	if err != nil {
-		return nil, err
-	}
-	return instance, nil
-}
-
-func newBenchWasmerInstance(b *testing.B, code []byte, config *wasmer.Config) *wasmer.Instance {
-	instance, err := newWasmerInstance(code, config)
-	if err != nil {
 		b.Fatal(err)
 	}
-	return instance
-}
-
-func benchWasmerInstance(b *testing.B, instance *wasmer.Instance, code []byte) {
 	run, err := instance.Exports.GetFunction("run")
 	if err != nil {
 		b.Fatal(err)
 	}
-	for i := 0; i < b.N; i++ {
-		ret, err := run(int64(seed), int64(arrLen), int64(iter))
-		if err != nil {
-			b.Fatal(err)
-		}
-		_checksum, ok := ret.(int64)
-		if !ok {
-			b.Fatal("can not convert return value to int64")
-		}
-		checksum := uint(_checksum)
-		if !validResult(checksum) {
-			b.Fatal("invalid checksum:", checksum)
-		}
-		reportCodeMetadata(b, code)
+
+	return &wasmerRunner{
+		run: run,
 	}
 }
 
-func newWasm3Func(code []byte) (wasm3.FunctionWrapper, error) {
+func (r *wasmerRunner) Run(seed int, arrLen int, iter int) (uint, error) {
+	ret, err := r.run(int32(seed), int32(arrLen), int32(iter))
+	if err != nil {
+		return 0, err
+	}
+	_checksum, ok := ret.(int32)
+	if !ok {
+		return 0, fmt.Errorf("can not convert return value to int32")
+	}
+	checksum := uint(_checksum)
+	return checksum, nil
+}
+
+type wasm3Runner struct {
+	run wasm3.FunctionWrapper
+}
+
+func newWasm3Runner(b *testing.B, code []byte, lang LanguageName) BenchmarkRunner {
 	runtime := wasm3.NewRuntime(&wasm3.Config{
 		Environment: wasm3.NewEnvironment(),
 		StackSize:   64 * 1024,
 	})
 	module, err := runtime.ParseModule(code)
 	if err != nil {
-		return nil, err
+		b.Fatal(err)
 	}
 	_, err = runtime.LoadModule(module)
 	if err != nil {
-		return nil, err
+		b.Fatal(err)
 	}
 	run, err := runtime.FindFunction("run")
 	if err != nil {
-		return nil, err
-	}
-	return run, nil
-}
-
-func newBenchWasm3Func(b *testing.B, code []byte) wasm3.FunctionWrapper {
-	module, err := newWasm3Func(code)
-	if err != nil {
 		b.Fatal(err)
 	}
-	return module
-}
-
-func benchWasm3Func(b *testing.B, run wasm3.FunctionWrapper, code []byte) {
-	for i := 0; i < b.N; i++ {
-		ret, err := run(int(seed), int(arrLen), int(iter))
-		if err != nil {
-			b.Fatal(err)
-		}
-		checksum := uint(ret)
-		if !validResult(checksum) {
-			b.Fatal("invalid checksum:", checksum)
-		}
-		reportCodeMetadata(b, code)
+	return &wasm3Runner{
+		run: run,
 	}
 }
 
-//go:embed testdata/rust_o2.wasm
-var rustWasmBytecode_o2 []byte
-
-//go:embed testdata/rust_os.wasm
-var rustWasmBytecode_os []byte
-
-func BenchmarkWasmRust(b *testing.B) {
-	wasmerCases := []struct {
-		name     string
-		code     []byte
-		instance *wasmer.Instance
-	}{
-		{"wasmer/singlepass/o2", rustWasmBytecode_o2, newBenchWasmerInstance(b, rustWasmBytecode_o2, wasmer.NewConfig().UseSinglepassCompiler())},
-		{"wasmer/singlepass/os", rustWasmBytecode_os, newBenchWasmerInstance(b, rustWasmBytecode_os, wasmer.NewConfig().UseSinglepassCompiler())},
-		{"wasmer/cranelift/o2", rustWasmBytecode_o2, newBenchWasmerInstance(b, rustWasmBytecode_o2, wasmer.NewConfig().UseCraneliftCompiler())},
-		{"wasmer/cranelift/os", rustWasmBytecode_os, newBenchWasmerInstance(b, rustWasmBytecode_os, wasmer.NewConfig().UseCraneliftCompiler())},
+func (r *wasm3Runner) Run(seed int, arrLen int, iter int) (uint, error) {
+	ret, err := r.run(int(seed), int(arrLen), int(iter))
+	if err != nil {
+		return 0, err
 	}
-	for _, bc := range wasmerCases {
-		b.Run(bc.name, func(b *testing.B) {
-			b.ResetTimer()
-			benchWasmerInstance(b, bc.instance, bc.code)
-		})
-	}
-	wasm3Cases := []struct {
-		name string
-		code []byte
-		run  wasm3.FunctionWrapper
-	}{
-		{"wasm3/os", rustWasmBytecode_os, newBenchWasm3Func(b, rustWasmBytecode_os)},
-		{"wasm3/o2", rustWasmBytecode_o2, newBenchWasm3Func(b, rustWasmBytecode_o2)},
-	}
-	for _, bc := range wasm3Cases {
-		b.Run(bc.name, func(b *testing.B) {
-			b.ResetTimer()
-			benchWasm3Func(b, bc.run, bc.code)
-		})
-	}
-}
-
-//go:embed testdata/assemblyscript.wasm
-var assemblyScriptBytecode []byte
-
-func BenchmarkWasmAssemblyScript(b *testing.B) {
-	wasmerCases := []struct {
-		name     string
-		instance *wasmer.Instance
-	}{
-		{"wasmer/singlepass", newBenchWasmerInstance(b, assemblyScriptBytecode, wasmer.NewConfig().UseSinglepassCompiler())},
-		{"wasmer/cranelift", newBenchWasmerInstance(b, assemblyScriptBytecode, wasmer.NewConfig().UseCraneliftCompiler())},
-	}
-	for _, bc := range wasmerCases {
-		b.Run(bc.name, func(b *testing.B) {
-			b.ResetTimer()
-			benchWasmerInstance(b, bc.instance, assemblyScriptBytecode)
-		})
-	}
-}
-
-//go:embed testdata/zig_fast.wasm
-var zigBytecode_fast []byte
-
-//go:embed testdata/zig_small.wasm
-var zigBytecode_small []byte
-
-func BenchmarkWasmZig(b *testing.B) {
-	wasmerCases := []struct {
-		name     string
-		code     []byte
-		instance *wasmer.Instance
-	}{
-		{"wasmer/singlepass/fast", zigBytecode_fast, newBenchWasmerInstance(b, zigBytecode_fast, wasmer.NewConfig().UseSinglepassCompiler())},
-		{"wasmer/singlepass/small", zigBytecode_small, newBenchWasmerInstance(b, zigBytecode_small, wasmer.NewConfig().UseSinglepassCompiler())},
-		{"wasmer/cranelift/fast", zigBytecode_fast, newBenchWasmerInstance(b, zigBytecode_fast, wasmer.NewConfig().UseCraneliftCompiler())},
-		{"wasmer/cranelift/small", zigBytecode_small, newBenchWasmerInstance(b, zigBytecode_small, wasmer.NewConfig().UseCraneliftCompiler())},
-	}
-	for _, bc := range wasmerCases {
-		b.Run(bc.name, func(b *testing.B) {
-			b.ResetTimer()
-			benchWasmerInstance(b, bc.instance, bc.code)
-		})
-	}
+	checksum := uint(ret)
+	return checksum, nil
 }

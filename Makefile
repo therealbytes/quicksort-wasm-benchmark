@@ -12,7 +12,7 @@ solidity:
 	forge build --optimizer-runs 1000 --sizes
 	jq -r '.deployedBytecode.object' out/QuicksortBenchmark.sol/QuicksortBenchmark.json > testdata/solidity.evm
 
-wasm: tinygo rust assemblyscript
+wasm: tinygo rust assemblyscript zig
 
 tinygo:
 	tinygo build -opt=2 -no-debug -o testdata/tinygo_o2.wasm -target=wasi tinygo/main.go

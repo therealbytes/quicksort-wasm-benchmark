@@ -1,4 +1,4 @@
-.PHONY: all prepare evm solidity wasm tinygo rust zig assemblyscript benchmark benchmark-native-rust
+.PHONY: all prepare evm solidity wasm tinygo rust zig assemblyscript benchmark benchmark-native-rust repro-tinygo-issue
 
 all: prepare evm wasm benchmark-arrlen-many
 

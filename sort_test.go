@@ -20,7 +20,7 @@ import (
 	"github.com/tetratelabs/wazero"
 	wz_api "github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
-	"github.com/therealbytes/concrete-sort/quicksort"
+	"github.com/therealbytes/quicksort-wasm-benchmark/quicksort"
 	"github.com/wasmerio/wasmer-go/wasmer"
 )
 
@@ -50,13 +50,23 @@ var (
 )
 
 var (
-	BenchTinyGo = getEnvVarBool("TINYGO", true)
-	BenchRust   = getEnvVarBool("RUST", true)
-	BenchAs     = getEnvVarBool("ASSEMBLYSCRIPT", true)
-	BenchZig    = getEnvVarBool("ZIG", true)
-	BenchWazero = getEnvVarBool("WAZERO", true)
-	BenchWasmer = getEnvVarBool("WASMER", true)
-	BenchWasm3  = getEnvVarBool("WASM3", true)
+	// Native
+	BenchNative = getEnvVarBool("NATIVE", true)
+	BenchGo     = getEnvVarBool("GO", BenchNative)
+	// EVM
+	BenchEVM = getEnvVarBool("EVM", true)
+	BenchSol = getEnvVarBool("SOLIDITY", BenchEVM)
+	// Wasm
+	BenchAllLangs = getEnvVarBool("ALL_LANGS", true)
+	BenchTinyGo   = getEnvVarBool("TINYGO", BenchAllLangs)
+	BenchRust     = getEnvVarBool("RUST", BenchAllLangs)
+	BenchAs       = getEnvVarBool("ASSEMBLYSCRIPT", BenchAllLangs)
+	BenchZig      = getEnvVarBool("ZIG", BenchAllLangs)
+	// Runtimes
+	BenchAllRuntimes = getEnvVarBool("ALL_RUNTIMES", true)
+	BenchWazero      = getEnvVarBool("WAZERO", BenchAllRuntimes)
+	BenchWasmer      = getEnvVarBool("WASMER", BenchAllRuntimes)
+	BenchWasm3       = getEnvVarBool("WASM3", BenchAllRuntimes)
 )
 
 func getEnvVarInt(name string, defaultValue int) int {
@@ -213,6 +223,9 @@ func reportCodeMetadata(b *testing.B, code []byte) {
 }
 
 func BenchmarkGo(b *testing.B) {
+	if !BenchGo {
+		b.SkipNow()
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		benchmark := quicksort.NewQuicksortBenchmark(uint(Seed))
@@ -225,6 +238,9 @@ func BenchmarkGo(b *testing.B) {
 }
 
 func BenchmarkEVM(b *testing.B) {
+	if !BenchSol {
+		b.SkipNow()
+	}
 	var (
 		address   = common.HexToAddress("0xc0ffee")
 		origin    = common.HexToAddress("0xc0ffee0001")
@@ -288,24 +304,22 @@ func BenchmarkWasm(b *testing.B) {
 			for _, binary := range benchmark.Binaries {
 				name := fmt.Sprintf("%s_%s_%s_%s", benchmark.Language, runtime.Name, runtime.ConfigStr, binary.CompilerOptionsStr)
 				b.Run(name, func(b *testing.B) {
-
 					switch {
 					case benchmark.Language == TinyGo && !BenchTinyGo:
-						b.Skip("skipping")
+						b.SkipNow()
 					case benchmark.Language == Rust && !BenchRust:
-						b.Skip("skipping")
+						b.SkipNow()
 					case benchmark.Language == AssemblyScript && !BenchAs:
-						b.Skip("skipping")
+						b.SkipNow()
 					case benchmark.Language == Zig && !BenchZig:
-						b.Skip("skipping")
+						b.SkipNow()
 					case runtime.Name == Wazero && !BenchWazero:
-						b.Skip("skipping")
+						b.SkipNow()
 					case runtime.Name == Wasmer && !BenchWasmer:
-						b.Skip("skipping")
+						b.SkipNow()
 					case runtime.Name == Wasm3 && !BenchWasm3:
-						b.Skip("skipping")
+						b.SkipNow()
 					}
-
 					var runner BenchmarkRunner
 					switch runtime.Name {
 					case Wazero:

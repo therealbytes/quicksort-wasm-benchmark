@@ -42,9 +42,12 @@ benchmark-arrlen: benchmark
 	mv results/benchmark_results.csv results/benchmark_results_$(ARR_LEN).csv
 
 benchmark-arrlen-many:
-	ARR_LEN=10 $(MAKE) benchmark-arrlen
+	# ARR_LEN=10 $(MAKE) benchmark-arrlen
 	ARR_LEN=100 $(MAKE) benchmark-arrlen
 	ARR_LEN=1000 $(MAKE) benchmark-arrlen
 
 benchmark-native-rust:
 	cd rust && cargo +nightly bench
+
+repro-tinygo-issue:
+	ARR_LEN=10 ITER=1 NATIVE=false EVM=false ALL_LANGS=false ALL_RUNTIMES=false WASMER=true TINYGO=true go test -bench .

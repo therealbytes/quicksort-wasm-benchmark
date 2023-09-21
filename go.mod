@@ -1,4 +1,4 @@
-module github.com/therealbytes/concrete-sort
+module github.com/therealbytes/quicksort-wasm-benchmark
 
 go 1.19
 

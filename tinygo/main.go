@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/therealbytes/concrete-sort/quicksort"
+	"github.com/therealbytes/quicksort-wasm-benchmark/quicksort"
 )
 
 //export run

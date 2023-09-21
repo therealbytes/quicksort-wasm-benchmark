@@ -39,12 +39,12 @@ benchmark:
 	rm benchmark_output.txt
 
 benchmark-arrlen: benchmark
-	mv results/benchmark_results.csv results/benchmark_results_$(ARRLEN).csv
+	mv results/benchmark_results.csv results/benchmark_results_$(ARR_LEN).csv
 
 benchmark-arrlen-many:
-	ARRLEN=10 $(MAKE) benchmark-arrlen
-	ARRLEN=100 $(MAKE) benchmark-arrlen
-	ARRLEN=1000 $(MAKE) benchmark-arrlen
+	ARR_LEN=10 $(MAKE) benchmark-arrlen
+	ARR_LEN=100 $(MAKE) benchmark-arrlen
+	ARR_LEN=1000 $(MAKE) benchmark-arrlen
 
 benchmark-native-rust:
 	cd rust && cargo +nightly bench

@@ -45,7 +45,7 @@ const (
 
 var (
 	Seed   = getEnvVarInt("SEED", 0)
-	ArrLen = getEnvVarInt("ARRLEN", 1000)
+	ArrLen = getEnvVarInt("ARR_LEN", 1000)
 	Iter   = getEnvVarInt("ITER", 100)
 )
 

@@ -1,6 +1,6 @@
 # Quicksort WASM benchmark
 
-A benchmark comparing various runtimes and languages using the quicksort algorithm.
+A benchmark for WebAssembly runtimes and the EVM based on quicksort.
 
 [Results](./results/benchmark_results_1000.csv) (run on a Intel Core i5 2020 MacBook Pro)
 

@@ -1,13 +1,17 @@
 # Quicksort WASM benchmark
 
-A benchmark for WebAssembly implementations of the Quicksort algorithm compared to Native Go and the EVM (Solidity).
+A benchmark comparing various runtimes and languages using the quicksort algorithm.
+
+[Results](./results/benchmark_results_1000.csv) (run on a Intel Core i5 2020 MacBook Pro)
 
 **Languages:**
 
-- TinyGo (opt=2, opt=s)
-- Rust (opt-level=2, opt-level=s)
-- AssemblyScript (optimizeLevel=3 shrinkLevel=1)
-- Zig (ReleaseSmall, ReleaseFast)
+- Go (Native)
+- Solidity (EVM)
+- TinyGo (WASM) (opt=2, opt=s)
+- Rust (WASM) (opt-level=2, opt-level=s)
+- AssemblyScript (WASM) (optimizeLevel=3 shrinkLevel=1)
+- Zig (WASM) (ReleaseSmall, ReleaseFast)
 
 **WASM Runtimes:**
 

@@ -16,21 +16,32 @@ wasm: tinygo rust assemblyscript zig
 
 tinygo:
 	tinygo build -opt=2 -no-debug -o testdata/tinygo_o2.wasm -target=wasi tinygo/main.go
+	wasm-opt -O4 --vacuum -o testdata/tinygo_o2.wasm testdata/tinygo_o2.wasm
 	tinygo build -opt=s -no-debug -o testdata/tinygo_oz.wasm -target=wasi tinygo/main.go
+	wasm-opt -O4 --vacuum -o testdata/tinygo_oz.wasm testdata/tinygo_oz.wasm
 
 rust:
-	rustc -C opt-level=2 -o testdata/rust_o2.wasm --target wasm32-unknown-unknown --crate-type cdylib rust/src/main.rs
-	rustc -C opt-level=s -o testdata/rust_os.wasm --target wasm32-unknown-unknown --crate-type cdylib rust/src/main.rs
+	cd rust && RUSTFLAGS="-C opt-level=2" cargo build --target wasm32-unknown-unknown --release
+	mv rust/target/wasm32-unknown-unknown/release/sort.wasm testdata/rust_o2.wasm
+	wasm-opt -O4 --vacuum -o testdata/rust_o2.wasm testdata/rust_o2.wasm
+	
+	cd rust && RUSTFLAGS="-C opt-level=s -Zlocation-detail=none" cargo build --target wasm32-unknown-unknown --release
+	mv rust/target/wasm32-unknown-unknown/release/sort.wasm testdata/rust_os.wasm
+	wasm-opt -O4 --vacuum -o testdata/rust_os.wasm testdata/rust_os.wasm
 
 zig:
 	cd zig && zig build -Doptimize=ReleaseFast
 	cp zig/zig-out/lib/zig.wasm testdata/zig_fast.wasm
+	# wasm-opt -O4 --vacuum -o testdata/zig_fast.wasm testdata/zig_fast.wasm
+
 	cd zig && zig build -Doptimize=ReleaseSmall
 	cp zig/zig-out/lib/zig.wasm testdata/zig_small.wasm
+	# wasm-opt -O4 --vacuum -o testdata/zig_small.wasm testdata/zig_m.wasm
 
 assemblyscript:
 	cd assemblyscript && npm run asbuild
 	cp assemblyscript/build/release.wasm testdata/assemblyscript.wasm
+	# wasm-opt -O2 --vacuum -o testdata/assemblyscript.wasm testdata/assemblyscript.wasm
 
 benchmark:
 	go test -bench . -benchmem | tee benchmark_output.txt

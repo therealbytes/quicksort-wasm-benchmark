@@ -4,7 +4,6 @@ all: prepare evm wasm benchmark-arrlen-many
 
 prepare:
 	mkdir -p testdata
-	mkdir -p results
 
 evm: solidity
 

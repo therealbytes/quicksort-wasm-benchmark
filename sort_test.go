@@ -374,11 +374,11 @@ type wazeroRunner struct {
 	run wz_api.Function
 }
 
-func newWazeroRunner(b *testing.B, code []byte, runtimeConfig wazero.RuntimeConfig, lang LanguageName) BenchmarkRunner {
+func newWazeroRunner(b *testing.B, code []byte, config wazero.RuntimeConfig, lang LanguageName) BenchmarkRunner {
 	var err error
 	ctx := context.Background()
 
-	r := wazero.NewRuntimeWithConfig(ctx, runtimeConfig)
+	r := wazero.NewRuntimeWithConfig(ctx, config)
 
 	if lang == AssemblyScript {
 		_, err = r.NewHostModuleBuilder("env").

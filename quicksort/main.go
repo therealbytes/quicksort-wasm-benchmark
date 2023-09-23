@@ -8,18 +8,18 @@ func NewQuicksortBenchmark(seed uint) *QuicksortBenchmark {
 	return &QuicksortBenchmark{seed: seed}
 }
 
-func (qs *QuicksortBenchmark) random() uint {
+func (qs *QuicksortBenchmark) random() uint32 {
 	qs.seed = (1103515245*qs.seed + 12345) % (1 << 31)
-	return qs.seed
+	return uint32(qs.seed)
 }
 
-func (qs *QuicksortBenchmark) randomizeArray(arr []uint) {
+func (qs *QuicksortBenchmark) randomizeArray(arr []uint32) {
 	for i := range arr {
 		arr[i] = qs.random() % 1000
 	}
 }
 
-func (qs *QuicksortBenchmark) quicksort(arr []uint, left, right int) {
+func (qs *QuicksortBenchmark) quicksort(arr []uint32, left, right int) {
 	i, j := left, right
 	if i == j {
 		return
@@ -48,12 +48,12 @@ func (qs *QuicksortBenchmark) quicksort(arr []uint, left, right int) {
 }
 
 func (qs *QuicksortBenchmark) Run(arrLen int, iter int) uint {
-	var checksum uint
-	arr := make([]uint, arrLen)
+	var checksum uint32
+	arr := make([]uint32, arrLen)
 	for i := 0; i < iter; i++ {
 		qs.randomizeArray(arr)
 		qs.quicksort(arr, 0, arrLen-1)
 		checksum += arr[arrLen/2]
 	}
-	return checksum
+	return uint(checksum)
 }

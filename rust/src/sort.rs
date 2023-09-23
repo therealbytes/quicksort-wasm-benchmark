@@ -7,18 +7,18 @@ impl QuicksortBenchmark {
         QuicksortBenchmark { seed: seed }
     }
 
-    fn random(&mut self) -> usize {
+    fn random(&mut self) -> u32 {
         self.seed = (1103515245 * self.seed + 12345) % (1 << 31);
-        self.seed
+        self.seed as u32
     }
 
-    fn randomize_array(&mut self, arr: &mut Vec<usize>) {
+    fn randomize_array(&mut self, arr: &mut Vec<u32>) {
         for x in arr.iter_mut() {
             *x = self.random() % 1000;
         }
     }
 
-    fn quick_sort(&mut self, arr: &mut Vec<usize>, left: usize, right: usize) {
+    fn quick_sort(&mut self, arr: &mut Vec<u32>, left: usize, right: usize) {
         if left >= right {
             return;
         }
@@ -50,12 +50,12 @@ impl QuicksortBenchmark {
     }
 
     pub fn run(&mut self, arr_len: usize, iter: usize) -> usize {
-        let mut checksum: usize = 0;
+        let mut checksum: u32 = 0;
         let mut arr = vec![0; arr_len];
         for _ in 0..iter {
             self.randomize_array(&mut arr);
             self.quick_sort(&mut arr, 0, arr_len - 1);
-            checksum += arr[arr_len/ 2];
+            checksum += arr[arr_len/2];
         }
         checksum as usize
     }

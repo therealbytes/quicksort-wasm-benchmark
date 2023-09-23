@@ -3,24 +3,24 @@ const allocator = std.heap.page_allocator;
 const expect = std.testing.expect;
 
 pub const quick_sort_benchmark = struct {
-    seed: u64,
+    seed: usize,
 
     pub fn init(seed: usize) quick_sort_benchmark {
-        return quick_sort_benchmark{ .seed = @as(u64, seed) };
+        return quick_sort_benchmark{ .seed = seed };
     }
 
-    pub fn random(self: *quick_sort_benchmark) usize {
+    pub fn random(self: *quick_sort_benchmark) u32 {
         self.seed = (1103515245 * self.seed + 12345) % (1 << 31);
-        return @as(usize, @truncate(self.seed));
+        return @as(u32, @truncate(self.seed));
     }
 
-    pub fn randomize_array(self: *quick_sort_benchmark, arr: []usize) void {
+    pub fn randomize_array(self: *quick_sort_benchmark, arr: []u32) void {
         for (arr) |*value| {
             value.* = self.random() % 1000;
         }
     }
 
-    pub fn quick_sort(self: *quick_sort_benchmark, arr: []usize, left: usize, right: usize) void {
+    pub fn quick_sort(self: *quick_sort_benchmark, arr: []u32, left: usize, right: usize) void {
         if (left >= right) return;
         var i: usize = left;
         var j: usize = right;
@@ -29,7 +29,7 @@ pub const quick_sort_benchmark = struct {
             while (arr[i] < pivot) : (i += 1) {}
             while (arr[j] > pivot) : (j -= 1) {}
             if (i <= j) {
-                std.mem.swap(usize, &arr[i], &arr[j]);
+                std.mem.swap(u32, &arr[i], &arr[j]);
                 i += 1;
                 if (j > 0) j -= 1;
             }
@@ -39,8 +39,8 @@ pub const quick_sort_benchmark = struct {
     }
 
     pub fn run(self: *quick_sort_benchmark, arr_len: usize, iter: usize) !usize {
-        var checksum: usize = 0;
-        const arr = try allocator.alloc(usize, arr_len);
+        var checksum: u32 = 0;
+        const arr = try allocator.alloc(u32, arr_len);
         defer allocator.free(arr);
 
         var i: usize = 0;
@@ -49,7 +49,7 @@ pub const quick_sort_benchmark = struct {
             self.quick_sort(arr, 0, arr.len - 1);
             checksum += arr[arr_len / 2];
         }
-        return checksum;
+        return @as(usize, checksum);
     }
 };
 
